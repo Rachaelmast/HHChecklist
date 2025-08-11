@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SkyBridge Healthcare – Home Health RN Skills Checklist</title>
+<style>
+  :root{--sb-blue:#0054A6;--sb-purple:#9B5B9B;--ink:#111827;--muted:#6b7280;--border:#e5e7eb;--bg:#f8fafc;--card:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--ink);background:var(--bg)}
+  .wrap{max-width:1100px;margin:auto;padding:20px}
+  header.brand{display:flex;align-items:center;gap:14px;background:var(--sb-blue);color:#fff;border-radius:16px;padding:14px 16px}
+  header.brand img{height:48px;background:#fff;border-radius:10px;padding:4px}
+  h1{margin:0;font-size:20px}
+  .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+  .meta label{font-size:12px;color:var(--muted)}
+  .meta input{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fff}
+  .scale{font-size:12px;color:var(--muted);margin:6px 0 14px}
+  .section{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin:14px 0}
+  .section h2{margin:0;padding:12px 14px;background:#f3f4f6;border-bottom:1px solid var(--border);font-size:16px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid var(--border)}
+  .row:first-of-type{border-top:none}
+  .choices{display:flex;gap:14px;white-space:nowrap}
+  .choices label{display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+  .footer{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:18px 0}
+  .btn{appearance:none;border:none;background:var(--sb-purple);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:600}
+  .btn:active{transform:translateY(1px)}
+  .muted{color:var(--muted);font-size:12px}
+  .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+  .bar{height:100%;background:var(--ink);width:0%}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="brand">
+      <img src="logo.png" alt="SkyBridge Healthcare logo" />
+      <div>
+        <h1>Home Health RN Skills Checklist</h1>
+        <div class="scale">Rate each item: 1 = No Experience · 2 = Needs Training · 3 = With Supervision · 4 = Independent</div>
+      </div>
+    </header>
+
+    <!-- ✅ Formspree endpoint -->
+    <form id="skillsForm" action="https://formspree.io/f/xanbvyzz" method="POST">
+      <!-- Suggested subject line & honeypot -->
+      <input type="hidden" name="_subject" value="Home Health RN Skills Checklist – New Submission" />
+      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" />
+
+      <div class="meta">
+        <div><label>Clinician Name</label><input required name="Clinician Name" type="text" placeholder="Your name"/></div>
+        <div><label>Email</label><input required name="Clinician Email" type="email" placeholder="you@example.com"/></div>
+        <div><label>Date</label><input name="Date" type="date"/></div>
+      </div>
+
+      <div class="progress" aria-label="Completion progress"><div class="bar" id="bar"></div></div>
+      <p class="muted" id="count">0 of 0 rated (0%)</p>
+
+      <div id="formSections"></div>
+
+      <div class="footer">
+        <button class="btn" type="submit">Submit Checklist</button>
+        <span class="muted">You’ll receive an email via Formspree with all responses.</span>
+      </div>
+    </form>
+    <p class="muted">This is an educational self‑assessment and does not replace employer or licensing requirements.</p>
+  </div>
+
+<script>
+/* ---------- DATA ---------- */
+const SECTIONS = {
+  "General Skills": [
+    "Standard precautions","Transmission-based isolation precautions","Peds code response","Adult code response","Defibrillator use",
+    "Care planning & discharge planning","Patient/family teaching","Electronic documentation","Head-to-toe assessment","Pain management"
+  ],
+  "Cardiovascular": [
+    "Angina/chest pain","Apical pulse rate & rhythm","Heart sounds (rate/rhythm) auscultation","Recognize dysrhythmias","Fluid overload recognition",
+    "Peripheral pulses & circulation checks","Lab interpretation – PT/INR/PTT","Lab interpretation – electrolytes","Holter monitor basics","Pacemakers/AICD care",
+    "Manage hypotension","CAD/post-MI care","Heart failure (CHF) management","Fluid retention","Hypertension","Pre/post cardiac surgery","Pre/post vascular surgery",
+    "Meds: ACE inhibitors","Meds: antiarrhythmics","Meds: antibiotics","Meds: anticoagulants","Meds: antihypertensives","Meds: antiplatelets","Meds: beta blockers",
+    "Meds: calcium channel blockers","Meds: diuretics","Meds: digoxin","Meds: nitrates (oral/topical)","Meds: opioids (narcotics)","Meds: potassium","Meds: statins"
+  ],
+  "Pulmonary": [
+    "Lung sounds; work of breathing","Pulse oximetry","ABG basics","O2 via nasal cannula","Apnea monitor","Chest physiotherapy/percussion","Airway establishment (basic)",
+    "Incentive spirometry","Oral/nasal suctioning","Sputum collection","Nebulizer treatments","CPAP","BiPAP","Ventilator management (home)","Asthma","COPD","Lung cancer",
+    "Primary pulmonary HTN","Pulmonary fibrosis","Pulmonary embolism","Meds: bronchodilators","Meds: steroids","Meds: expectorants","Meds: inhalers"
+  ],
+  "Neurological": [
+    "Neuro signs/LOC","Neuro-motor & sensory checks","Seizure precautions","Traction care","Alzheimer’s disease","Dementia (other)","Degenerative disorders (ALS/MS/etc)",
+    "Brain tumors","Post-CVA care","Guillain-Barré","Hemiparesis","Meningitis","Parkinson’s disease","Seizure disorders","Paraplegia/quadriplegia","Traumatic brain injury",
+    "Transient ischemic attack (TIA)","Meds: Alzheimer’s agents","Meds: antiparkinsonian","Meds: antiseizure","Meds: corticosteroids","Meds: sedatives/hypnotics"
+  ],
+  "Orthopedics": [
+    "Incision assessment","Skin/circulation checks","Gait assessment","Range of motion","ROM – active/passive techniques","Casts/braces","Crutch/walker training",
+    "Assistive device education","TENS units","Wheelchairs/lifts","Total joint replacement (hip/knee)","Meds: enoxaparin (Lovenox)"
+  ],
+  "Gastrointestinal": [
+    "Bowel pattern assessment","Fluid balance","Nutrition status","Ostomy (colo/ileo) care","Long-term feeding tubes","NG tube","PEG/gastrostomy tube",
+    "Drains/tubes management","Tube feeding","Feeding pumps","Bowel obstruction","Fecal incontinence","GI bleed","Post-GI surgery care","Hepatitis",
+    "Inflammatory bowel disease","Liver failure/transplant care"
+  ],
+  "Renal & GU": [
+    "AV fistula/shunt awareness","Fluid balance (renal)","Labs: BUN","Labs: serum creatinine","Labs: electrolytes","3-way bladder catheter","Foley insertion & care",
+    "Straight cath","Self-catheterization teaching","Ileal conduit/urostomy","Irrigations","Nephrostomy tube","Suprapubic catheter","Hemodialysis (clinic coordination)",
+    "Home hemodialysis","Peritoneal dialysis","Post-bladder surgery","Post-prostate surgery","Shunts & fistulas care","Urinary incontinence"
+  ],
+  "Endocrine & Metabolic": [
+    "Diabetic skin check","Hyper/hypoglycemia recognition","Labs: HbA1c","Labs: serum glucose","Glucometer use","Insulin pump basics","Diabetes self-management support",
+    "Meds: insulin","Meds: oral hypoglycemics"
+  ],
+  "Wound/Skin Care": [
+    "Wound assessment scales","Overall skin assessment","Surgical wound healing","Skin grafts","Burn care (home setting)","Pressure injury care","Dry vs wet-to-dry dressings",
+    "Positioning techniques","Specialty beds","Pressure-relieving mattresses/devices","Sterile wound care","Wound cultures","Irrigation","Negative pressure therapy (wound VAC)",
+    "Care for: burns","Care for: pressure injuries","Care for: surgical wounds","Care for: skin grafts"
+  ],
+  "Oncology": [
+    "Immune status assessment","Symptom management","Infection signs & symptoms","Labs: CBC with diff","Labs: CMP","Reverse isolation","Radiation therapy patient care",
+    "Leukemia/lymphoma","Post-oncologic surgery care","Meds: oral chemo","Meds: IV chemo administration","Meds: IV chemo monitoring","Meds: bone marrow stimulators"
+  ],
+  "Infectious Disease": [
+    "Infection signs & symptoms","Labs: blood counts","Culture & sensitivity","Isolation precautions","Care for: C. difficile","Care for: HIV","Care for: TB",
+    "Care for: MRSA/VRE","Meds: antibiotics","Meds: antivirals","Meds: antiretrovirals","Immunizations"
+  ],
+  "Psychiatry": [
+    "Monitor psychiatric symptoms","Medication adherence","Cognitive disorders","Schizophrenia/psychotic disorders","Substance-related disorders","Mood/anxiety & depression"
+  ],
+  "Women’s Health / Maternal–Infant": [
+    "Fetal heart tone assessment","Contraction assessment","Breastfeeding support","Pregnancy-related complications","Post-mastectomy care","Post-partum mother–baby visit",
+    "Newborn care","Bulb suctioning","Cord & circumcision care","Phototherapy (neonatal)"
+  ],
+  "Pediatrics": [
+    "Pediatric growth","Developmental stages","Nutrition","Family/caregiver interaction","Pediatric dose calculations","Croup tent","Ventilator (pediatric)",
+    "Tracheostomy (pediatric)","Pediatric Ambu use","Near-drowning care","Pre/post pediatric cardiac surgery","BPD (bronchopulmonary dysplasia)",
+    "Cystic fibrosis","Respiratory distress syndrome","Reye syndrome","Pre/post pediatric spinal surgery","Sickle cell disease","Spina bifida"
+  ],
+  "Pain Management": [
+    "Pain scale use","Response to interventions","Pharmacologic methods","Non-pharmacologic methods","PCA pump",
+    "Epidural catheter/site monitoring","Patient-controlled analgesia education"
+  ],
+  "Palliative & End-of-Life": [
+    "Family support & education","Medication protocols","Symptom control","Post-mortem care/protocols"
+  ],
+  "Patient & Family Teaching": [
+    "Diabetes education","Pre-/post‑procedure teaching","Post‑partum/infant care teaching","Medication education","Monitoring techniques",
+    "Nutrition counseling","Home safety","Self‑care strategies","Equipment training","Community resources"
+  ],
+  "Miscellaneous": [
+    "APS/CPS reporting","Fall risk assessment & prevention","National patient safety goals awareness","Home safety assessment",
+    "Recognize failure to thrive (lifespan)","Advance directives"
+  ],
+  "Case Management": [
+    "Experience in case management","Caseload management","Supervise home health aides"
+  ],
+  "Experience With": [
+    "Long/short-term disability","Handling complaints","Medicare/Medicaid","Pre‑certifications","Private insurance","Telephone assessments",
+    "Utilization review","Workers’ compensation"
+  ],
+  "Documentation": [
+    "ICD diagnosis coding","Plan of care (CMS-485) documentation","OASIS documentation"
+  ],
+  "EMR Systems": [
+    "Allscripts","Epic","Cerner","HomeCare HomeBase (HCHB)","OASIS platform","McKesson","Meditech","WellSky (Kinnser)","PointClickCare","KanTime","Other"
+  ],
+  "Age-Specific Competency": [
+    "Newborn (0–30 days)","Infant (30 days–1 yr)","Toddler (1–3 yrs)","Preschooler (3–5 yrs)","School age (5–12 yrs)",
+    "Adolescent (12–18 yrs)","Young adult (18–39 yrs)","Middle adult (39–64 yrs)","Older adult (65+)"
+  ]
+};
+
+/* ---------- RENDER ---------- */
+const form = document.getElementById('skillsForm');
+const container = document.getElementById('formSections');
+const progressBar = document.getElementById('bar');
+const countText = document.getElementById('count');
+
+const SCALE = [1,2,3,4];
+let total = 0, filled = 0;
+
+for (const [section, items] of Object.entries(SECTIONS)) {
+  const sec = document.createElement('section');
+  sec.className = 'section';
+  const h2 = document.createElement('h2');
+  h2.textContent = section;
+  sec.appendChild(h2);
+
+  items.forEach(item => {
+    total++;
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const label = document.createElement('div');
+    label.textContent = item;
+
+    const choices = document.createElement('div');
+    choices.className = 'choices';
+
+    SCALE.forEach(n => {
+      const id = `${section}::${item}::${n}`.replace(/[^a-z0-9:_-]+/gi,'_');
+      const name = `${section} — ${item}`; // nice email field name
+
+      const wrap = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = name;
+      input.value = String(n);
+      input.id = id;
+      input.addEventListener('change', onChange);
+
+      const txt = document.createElement('span');
+      txt.textContent = n;
+
+      wrap.appendChild(input);
+      wrap.appendChild(txt);
+      choices.appendChild(wrap);
+    });
+
+    row.appendChild(label);
+    row.appendChild(choices);
+    sec.appendChild(row);
+  });
+
+  container.appendChild(sec);
+}
+
+updateProgress();
+
+/* ---------- HANDLERS ---------- */
+function onChange(){
+  // recompute filled once per change (simple & robust)
+  const uniqueNames = new Set();
+  const checked = form.querySelectorAll('input[type="radio"]:checked');
+  checked.forEach(i => uniqueNames.add(i.name));
+  filled = uniqueNames.size;
+  updateProgress();
+}
+
+function updateProgress(){
+  const pct = total ? Math.round((filled/total)*100) : 0;
+  progressBar.style.width = pct + '%';
+  countText.textContent = `${filled} of ${total} rated (${pct}%)`;
+}
+
+/* Optional: show a success message inline after Formspree redirects back */
+form.addEventListener('submit', function(){
+  // Let Formspree handle the post & thank-you page.
+});
+</script>
+</body>
+</html>
