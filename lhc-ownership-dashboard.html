@@ -320,21 +320,99 @@ function parseJobs(table,tab){
     out.push({t:tab,co:cellText(c(a)),id:jid,city:city,st:cellText(c(st)),g:parseFloat(String(c(g)&&c(g).v!=null?c(g).v:'').replace(/[^0-9.]/g,''))||0})});
   return out;
 }
+/* ---- Google Drive connector (used on the published page, where direct Google calls are blocked) ---- */
+var JOB_TABS=['Home Health RN','Hospice RN','Home Health LPN'],psMcpP=null;
+function psMcp(){if(!psMcpP)psMcpP=(window.claude&&typeof window.claude.use==='function')?window.claude.use('mcp').catch(function(){return null}):Promise.resolve(null);return psMcpP}
+function b64bytes(b){var s=atob(b),u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
+function parseCsv(t){
+  var out=[],row=[],f='',q=false,i=0,c;t=t.replace(/^﻿/,'');
+  for(;i<t.length;i++){c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;else if(c===','){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''}else f+=c}
+  if(f!==''||row.length){row.push(f);out.push(row)}
+  return out;
+}
+function gridTable(g){var h=g[0]||[];return {cols:h.map(function(l){return {label:l}}),rows:g.slice(1).map(function(r){return {c:r.map(function(v){return v===''||v==null?null:{v:v}})}})}}
+function driveFile(m,id,type){
+  return m.callTool('Google Drive','download_file_content',{fileId:id,exportMimeType:type},{cache:false}).then(function(res){
+    var p=res&&res.payload;if(typeof p==='string'){try{p=JSON.parse(p)}catch(e){}}
+    if(!p||typeof p.content!=='string')throw {code:'tool_error'};return b64bytes(p.content);
+  });
+}
+function psDrive(){
+  return psMcp().then(function(m){
+    if(!m)return null;
+    return driveFile(m,PEND_ID,'text/csv').then(function(b){return {table:gridTable(parseCsv(new TextDecoder().decode(b)))}},function(e){return {err:(e&&e.code)||'upstream_error'}});
+  });
+}
+/* read an .xlsx (zip) with the browser's own unzip, no library */
+function unzip(u){
+  var dv=new DataView(u.buffer,u.byteOffset,u.byteLength),e=u.length-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)return Promise.reject('zip');
+  var n=dv.getUint16(e+10,true),o=dv.getUint32(e+16,true),files={},td=new TextDecoder();
+  for(var k=0;k<n;k++){var meth=dv.getUint16(o+10,true),cs=dv.getUint32(o+20,true),nl=dv.getUint16(o+28,true),xl=dv.getUint16(o+30,true),cl=dv.getUint16(o+32,true),lo=dv.getUint32(o+42,true);
+    files[td.decode(u.subarray(o+46,o+46+nl))]={m:meth,cs:cs,lo:lo};o+=46+nl+xl+cl}
+  return {get:function(name){var f=files[name];if(!f)return Promise.resolve(null);
+    var s=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true),raw=u.subarray(s,s+f.cs);
+    if(f.m===0)return Promise.resolve(td.decode(raw));
+    return new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}};
+}
+function xmlDoc(t){return new DOMParser().parseFromString(t,'application/xml')}
+function byTag(n,t){return Array.prototype.slice.call(n.getElementsByTagNameNS('*',t))}
+function colIdx(r){var m=String(r||'').match(/^[A-Z]+/),n=0;if(!m)return -1;for(var i=0;i<m[0].length;i++)n=n*26+m[0].charCodeAt(i)-64;return n-1}
+function xlsxSheets(u,names){
+  var z=unzip(u);if(z&&typeof z.then==='function')return z;
+  return Promise.all([z.get('xl/workbook.xml'),z.get('xl/_rels/workbook.xml.rels'),z.get('xl/sharedStrings.xml')]).then(function(a){
+    var wb=xmlDoc(a[0]),rel=xmlDoc(a[1]),ss=a[2]?byTag(xmlDoc(a[2]),'si').map(function(si){return byTag(si,'t').map(function(t){return t.textContent}).join('')}):[];
+    var tgt={};byTag(rel,'Relationship').forEach(function(r){tgt[r.getAttribute('Id')]=r.getAttribute('Target')});
+    var sh={};byTag(wb,'sheet').forEach(function(s){var id=s.getAttribute('r:id')||s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'),t=tgt[id]||'';sh[s.getAttribute('name')]=t.charAt(0)==='/'?t.slice(1):'xl/'+t.replace(/^\.\//,'')});
+    return Promise.all(names.map(function(nm){return sh[nm]?z.get(sh[nm]):null})).then(function(xs){
+      return xs.map(function(x){if(!x)return null;var g=[];
+        byTag(xmlDoc(x),'row').forEach(function(row){var r=[];byTag(row,'c').forEach(function(c){var i=colIdx(c.getAttribute('r')),t=c.getAttribute('t'),v=byTag(c,'v')[0],val;
+            if(t==='s')val=v?ss[+v.textContent]||'':'';else if(t==='inlineStr')val=byTag(c,'t').map(function(x){return x.textContent}).join('');else val=v?v.textContent:'';
+            if(i>=0)r[i]=val});for(var j=0;j<r.length;j++)if(r[j]==null)r[j]='';g.push(r)});
+        return gridTable(g)});
+    });
+  });
+}
+function psDriveJobs(force){
+  if(!force&&PS.jobsAt&&Date.now()-PS.jobsAt<30*60*1000&&PS.jobs.length)return Promise.resolve(PS.jobs);
+  return psMcp().then(function(m){
+    if(!m)return null;
+    return driveFile(m,JOB_ID,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').then(function(u){return xlsxSheets(u,JOB_TABS)}).then(function(ts){
+      if(!ts.every(function(t){return t}))return null;PS.jobsAt=Date.now();
+      return [].concat.apply([],ts.map(function(t,i){return parseJobs(t,JOB_TABS[i])}));
+    }).catch(function(){return null});
+  });
+}
+function psGvizJobs(){return Promise.all(JOB_TABS.map(function(t){return gviz(JOB_ID,t).then(function(x){return x&&x.table?parseJobs(x.table,t):null})})).then(function(all){return all.every(function(a){return a})?[].concat.apply([],all):null})}
+function psFailMsg(code){
+  var tail=' Showing the saved list from '+snapTxt()+'.';
+  if(code==='server_not_connected'||code==='selection_required'||code==='server_not_found')return 'To sync live, add Google Drive in claude.ai Settings > Connectors.'+tail;
+  if(code==='needs_reauth')return 'To sync live, reconnect Google Drive in claude.ai Settings > Connectors.'+tail;
+  if(code==='not_in_manifest'||code==='approval_required'||code==='consent_required')return 'To sync live, click Refresh and allow Google Drive for this page.'+tail;
+  if(code==='tool_error')return 'Google Drive could not open the Redzone sheet. Check that you have access to it.'+tail;
+  if(code==='blocked_by_policy')return 'Your organization blocks Google Drive for this page.'+tail;
+  return 'Could not reach Google just now.'+tail+' Click Refresh to try again.';
+}
 var psLoading=false;
 function loadPS(quiet){
   if(psLoading)return Promise.resolve();psLoading=true;
   if(!quiet)psChip('Reading the sheet...');
-  return gviz(PEND_ID).then(function(r){
-    if(!r||r.err||!r.table||r.status==='error'){
+  var via='';
+  return psDrive().then(function(d){
+    if(d&&d.table){via='drive';return d}
+    return gviz(PEND_ID).then(function(r){if(r&&!r.err&&r.table&&r.status!=='error'){via='gviz';return {table:r.table}}return {err:d&&d.err}});
+  }).then(function(res){
+    if(!res||!res.table){
       if(!PS.rows.length){fromSnap();PS.at=0}
-      PS.src='snap';
-      psChip('Could not reach Google from here, so this is the saved list from '+snapTxt()+'. Open the downloaded copy of this page to sync live.','miss');
-      return null;
+      PS.src='snap';psChip(psFailMsg(res&&res.err),'miss');return null;
     }
-    PS.rows=parseLive(r.table);PS.at=Date.now();PS.src='live';
-    return Promise.all(['Home Health RN','Hospice RN','Home Health LPN'].map(function(t){return gviz(JOB_ID,t).then(function(x){return x&&x.table?parseJobs(x.table,t):null})})).then(function(all){
-      var ok=all.every(function(a){return a});if(ok)PS.jobs=[].concat.apply([],all);else if(!PS.jobs.length)PS.jobs=SNAP.jobs.map(function(j){return {t:j.t,co:j.co,id:j.id,city:j.city,st:j.st,g:+j.g||0}});
-      psChip('Synced live '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),'ok');
+    PS.rows=parseLive(res.table);PS.at=Date.now();PS.src='live';
+    return (via==='drive'?psDriveJobs(!quiet):psGvizJobs()).then(function(jobs){
+      if(jobs)PS.jobs=jobs;else if(!PS.jobs.length)PS.jobs=SNAP.jobs.map(function(j){return {t:j.t,co:j.co,id:j.id,city:j.city,st:j.st,g:+j.g||0}});
+      psChip('Synced live '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+(jobs?'':'. Job sheet from the saved copy.'),'ok');
     });
   }).then(function(){psLoading=false;render()},function(){psLoading=false;render()});
 }
