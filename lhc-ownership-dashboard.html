@@ -77,6 +77,9 @@ a{color:var(--navy)}
 .stbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow:auto}
 .stbox h3{margin:0 0 8px;font-size:15px}.stbox table{min-width:0}.stbox th{position:static;cursor:default}.stbox td,.stbox th{padding:5px 8px}
 .num{text-align:right}
+.stg{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;background:var(--k)}
+.od{color:var(--red);font-weight:700}
+.bdh{border-top:1px solid var(--line);margin-top:12px;padding-top:8px}
 #v-pending thead{position:sticky;top:0;z-index:2}#v-pending th{position:static}
 .psf th{cursor:default;text-transform:none;letter-spacing:0;padding:4px 6px 8px;font-weight:400}
 .psf input,.psf select{width:100%;min-width:90px;padding:4px 6px;font-size:13px;border-radius:6px}
@@ -93,7 +96,7 @@ a{color:var(--navy)}
   <div class="rule"><b>Standing rule:</b> whoever gets a req directly from a manager keeps that relationship and placement, regardless of the owner shown. States not assigned default to Rachael until reassigned. WV is parked (1 placement each, Ainsley and Rachael).</div>
   <div id="banner" class="banner" hidden></div>
   <div class="cards" id="cards"></div>
-  <div class="tabs"><button class="tab on" data-t="branches">Branches</button><button class="tab" data-t="map">Map</button><button class="tab" data-t="contacts">Contacts</button><button class="tab" data-t="pending">Pending Submissions<span id="pbadge" class="tag warn" style="display:none"></span></button><button class="tab" data-t="jobs">Open Jobs</button><button class="tab" data-t="stats">Team Stats</button></div>
+  <div class="tabs"><button class="tab on" data-t="branches">Branches</button><button class="tab" data-t="map">Map</button><button class="tab" data-t="contacts">Contacts</button><button class="tab" data-t="pending">Pending Submissions<span id="pbadge" class="tag warn" style="display:none"></span></button><button class="tab" data-t="jobs">Open Jobs</button><button class="tab" data-t="stats">Team Stats</button><button class="tab" data-t="bd">Business Dev</button></div>
 
   <div id="filters" class="bar">
     <input type="search" id="q" placeholder="Search branch, city, contact, notes">
@@ -108,8 +111,8 @@ a{color:var(--navy)}
   <div id="v-branches"><div class="tablewrap"><table><thead><tr>
     <th data-k="st">State</th><th data-k="city">City</th><th data-k="name">Branch</th><th data-k="disc">Type</th><th data-k="owner">Owner</th><th data-k="conf">Status</th><th data-k="jobs">Jobs</th><th data-k="subs">Subs</th><th data-k="wins">Wins</th><th data-k="nc">Contacts</th></tr></thead><tbody id="rowsB"></tbody></table></div><p class="muted" id="countB"></p></div>
 
-  <div id="v-map" hidden><div class="mapbox"><svg class="map" id="svg" viewBox="0 0 975 610" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div class="legend"><span><i style="background:var(--navy)"></i>Rachael</span><span><i style="background:var(--sky)"></i>Melissa</span><span><i style="background:var(--purple)"></i>Ainsley</span><span><i style="background:var(--red)"></i>Unassigned</span><span>Large dot = worked with. Small dot = branch we have not worked yet.</span></div>
+  <div id="v-map" hidden><div class="mapbox"><div style="margin:2px 4px 6px"><select id="mapColor"><option value="owner">Color by owner</option><option value="stage">Color by business development stage</option></select></div><svg class="map" id="svg" viewBox="0 0 975 610" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="legend" id="legStage" hidden></div><div class="legend" id="legOwn"><span><i style="background:var(--navy)"></i>Rachael</span><span><i style="background:var(--sky)"></i>Melissa</span><span><i style="background:var(--purple)"></i>Ainsley</span><span><i style="background:var(--red)"></i>Unassigned</span><span>Large dot = worked with. Small dot = branch we have not worked yet.</span></div>
     <p class="muted small" id="countM" style="margin:4px"></p></div></div>
 
   <div id="v-contacts" hidden>
@@ -142,10 +145,28 @@ a{color:var(--navy)}
       <select id="stClient"><option value="">All clients</option><option value="__lhc">LHC Group only</option></select></div>
     <div class="stgrid" id="stBody"></div>
   </div>
+  <div id="v-bd" hidden>
+    <div class="bar" style="justify-content:space-between"><div><b>Business development</b> <span class="muted small">Log every outreach attempt to an LHC branch. Forwarded outreach emails are added by Claude each morning.</span></div><button class="ghost" id="bdExp">Export outreach log</button></div>
+    <div class="stgrid" id="bdTop"></div>
+    <div class="bar" style="margin-top:12px"><select id="bdOwner"><option value="">All owners</option><option>Rachael</option><option>Melissa</option><option>Ainsley</option><option>Unassigned</option></select>
+      <select id="bdStageF"></select><select id="bdState"></select>
+      <label class="chk"><input type="checkbox" id="bdStale"> No outreach in 30+ days</label>
+      <input type="search" id="bdQ" placeholder="Branch, city"></div>
+    <div class="tablewrap"><table><thead><tr><th data-bs="name">Branch</th><th data-bs="owner">Owner</th><th data-bs="stage">Stage</th><th data-bs="last">Last outreach</th><th data-bs="jobs">Open jobs</th><th></th></tr></thead><tbody id="bdBody2"></tbody></table></div>
+    <p class="muted" id="bdNote"></p>
+  </div>
   <div class="foot" id="foot"></div>
 </div>
 
 <dialog id="bd"><div id="bdBody"></div></dialog>
+<dialog id="bdl"><h3 style="margin:0 0 4px">Log outreach</h3><div class="muted small" id="bdlBranch" style="margin-bottom:10px"></div><div class="grid">
+  <label class="full">Contact<input id="bdlContact" list="bdlContacts" placeholder="Name of the person you reached"><datalist id="bdlContacts"></datalist></label>
+  <label>How<select id="bdlMethod"><option>Call</option><option>Email</option><option>LinkedIn</option><option>Text</option><option>Visit</option><option>Event</option></select></label>
+  <label>Outcome<select id="bdlOutcome"><option>No answer</option><option>Left voicemail</option><option>Intro sent</option><option>Meeting set</option><option>In conversation</option><option>Req received</option><option>Placed</option><option>Not interested</option><option>Other</option></select></label>
+  <label class="full">Notes<textarea id="bdlNote" style="min-height:60px"></textarea></label>
+  <label>Next step (optional)<input id="bdlNext" placeholder="For example: call back"></label><label>Due date<input id="bdlDue" type="date"></label></div>
+  <div class="small muted" id="bdlMsg" style="margin-top:6px"></div>
+  <div class="row"><button class="ghost" id="bdlClose">Cancel</button><button id="bdlSave">Save</button></div></dialog>
 <dialog id="cd"><form method="dialog" id="cf"><h3 id="cTitle" style="margin:0 0 10px">Contact</h3><div class="grid">
   <label>Name<input id="cn" required></label><label>Role<select id="cr"><option>Manager</option><option>Regional</option><option>Branch line</option><option>Contact</option></select></label>
   <label class="full">Title / branch<input id="ct"></label>
@@ -201,14 +222,14 @@ function cards(){var el=$("cards");el.textContent="";
 function pill(o){return h("span","pill o-"+o,o)}
 function rowsB(){var L=fB();L.sort(function(a,b){var x=a[sortB],y=b[sortB];if(typeof x==="number"||typeof y==="number"){return ((x||0)-(y||0))*dirB}x=String(x||"").toLowerCase();y=String(y||"").toLowerCase();return x<y?-dirB:x>y?dirB:0});
  var tb=$("rowsB"),f=document.createDocumentFragment();
- L.forEach(function(b){var tr=h("tr");tr.appendChild(h("td",null,b.st));tr.appendChild(h("td",null,b.city));var n=h("td",null,b.name);if(b.worked){n.appendChild(document.createTextNode(" "));n.appendChild(h("span","tag ok","worked"))}tr.appendChild(n);tr.appendChild(h("td",null,b.disc));var o=h("td");o.appendChild(pill(b.owner));tr.appendChild(o);var s=h("td");s.appendChild(h("span","tag "+(b.conf==="Confirmed"?"ok":"warn"),b.conf));tr.appendChild(s);tr.appendChild(h("td",null,String(b.jobs)));tr.appendChild(h("td",null,String(b.subs)));tr.appendChild(h("td",null,String(b.wins)));tr.appendChild(h("td",null,String(b.nc)));tr.onclick=function(){openB(b.id)};f.appendChild(tr)});
+ L.forEach(function(b){var tr=h("tr");tr.appendChild(h("td",null,b.st));tr.appendChild(h("td",null,b.city));var n=h("td",null,b.name);if(b.worked){n.appendChild(document.createTextNode(" "));n.appendChild(h("span","tag ok","worked"))}var lt=bdLast(b.id);if(lt)n.appendChild(h("div","ps-sub","Last outreach "+mdTxt(new Date(lt.at))+": "+lt.outcome+" ("+bdWho(lt)+")"));tr.appendChild(n);tr.appendChild(h("td",null,b.disc));var o=h("td");o.appendChild(pill(b.owner));tr.appendChild(o);var s=h("td");s.appendChild(h("span","tag "+(b.conf==="Confirmed"?"ok":"warn"),b.conf));tr.appendChild(s);tr.appendChild(h("td",null,String(b.jobs)));tr.appendChild(h("td",null,String(b.subs)));tr.appendChild(h("td",null,String(b.wins)));tr.appendChild(h("td",null,String(b.nc)));tr.onclick=function(){openB(b.id)};f.appendChild(tr)});
  tb.textContent="";tb.appendChild(f);$("countB").textContent=L.length+" of "+B.length+" branches shown. Click a row for contacts and to change the owner."}
 
 function map(){var svg=$("svg");svg.textContent="";var NS="http://www.w3.org/2000/svg";
  ST.forEach(function(s){var p=document.createElementNS(NS,"path");p.setAttribute("d",s.d);p.setAttribute("class","land");svg.appendChild(p)});
  var L=fB().filter(function(b){return b.x!=null});L.sort(function(a,b){return (a.worked?1:0)-(b.worked?1:0)});
  var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
- L.forEach(function(b){var c=document.createElementNS(NS,"circle");c.setAttribute("cx",b.x);c.setAttribute("cy",b.y);c.setAttribute("r",b.worked?5.2:3);c.setAttribute("class","dot");c.style.fill=OCOL[b.owner];c.style.fillOpacity=b.worked?1:.55;var t=document.createElementNS(NS,"title");t.textContent=b.name+" | "+b.owner+(b.worked?" | worked with":"");c.appendChild(t);c.addEventListener("click",function(){openB(b.id)});svg.appendChild(c);minx=Math.min(minx,b.x);maxx=Math.max(maxx,b.x);miny=Math.min(miny,b.y);maxy=Math.max(maxy,b.y)});
+ L.forEach(function(b){var c=document.createElementNS(NS,"circle");c.setAttribute("cx",b.x);c.setAttribute("cy",b.y);c.setAttribute("r",b.worked?5.2:3);c.setAttribute("class","dot");var stM=$("mapColor").value==="stage",sg=stM?bdStage(b):null;c.style.fill=stM?BD_COL[sg.i]:OCOL[b.owner];c.style.fillOpacity=b.worked?1:.55;var t=document.createElementNS(NS,"title");t.textContent=b.name+" | "+b.owner+(b.worked?" | worked with":"")+(sg?" | "+BD_ST[sg.i]:"");c.appendChild(t);c.addEventListener("click",function(){openB(b.id)});svg.appendChild(c);minx=Math.min(minx,b.x);maxx=Math.max(maxx,b.x);miny=Math.min(miny,b.y);maxy=Math.max(maxy,b.y)});
  var vb=[0,0,975,610];if($("fState").value&&L.length){var pad=40,w=Math.max(maxx-minx+pad*2,150),hh=Math.max(maxy-miny+pad*2,94);var r=975/610;if(w/hh>r)hh=w/r;else w=hh*r;vb=[(minx+maxx)/2-w/2,(miny+maxy)/2-hh/2,w,hh]}
  svg.setAttribute("viewBox",vb.join(" "));$("countM").textContent=L.length+" branches on the map. Locations are placed by ZIP code, so dots in the same city are spread slightly."}
 
@@ -222,8 +243,8 @@ function rowsC(){var L=fC();L.sort(function(a,b){var x=String(sortC==="loc"?locO
 
 function stateOpts(){var s=$("fState"),cur=s.value,set={};B.forEach(function(b){if(b.st)set[b.st]=1});C.forEach(function(c){if(c.st)set[c.st]=1});s.textContent="";var o=h("option",null,"All states");o.value="";s.appendChild(o);Object.keys(set).sort().forEach(function(k){var x=h("option",null,k);x.value=k;s.appendChild(x)});s.value=set[cur]?cur:""}
 
-function render(){recompute();stateOpts();cards();var noF=tab==="pending"||tab==="jobs"||tab==="stats";$("filters").style.display=noF?"none":"";$("cards").style.display=noF?"none":"";psBadge();$("fDisc").style.display=tab==="contacts"?"none":"";$("fWorked").parentNode.style.display=tab==="contacts"?"none":"";$("lbConf").style.display=tab==="contacts"?"none":"";$("addB").style.display=tab==="contacts"?"":"none";
- if(tab==="branches")rowsB();else if(tab==="map")map();else if(tab==="pending")renderPS();else if(tab==="jobs")renderOJ();else if(tab==="stats")renderStats();else rowsC();foot()}
+function render(){recompute();stateOpts();cards();var noF=tab==="pending"||tab==="jobs"||tab==="stats"||tab==="bd";$("filters").style.display=noF?"none":"";$("cards").style.display=noF?"none":"";psBadge();$("fDisc").style.display=tab==="contacts"?"none":"";$("fWorked").parentNode.style.display=tab==="contacts"?"none":"";$("lbConf").style.display=tab==="contacts"?"none":"";$("addB").style.display=tab==="contacts"?"":"none";
+ if(tab==="branches")rowsB();else if(tab==="map")map();else if(tab==="pending")renderPS();else if(tab==="jobs")renderOJ();else if(tab==="stats")renderStats();else if(tab==="bd")renderBD();else rowsC();foot()}
 function foot(){var g=C.filter(function(c){return srcOf(c).indexOf("Gmail")>=0}).length;$("foot").textContent="Data loaded: "+B.length+" LHC branches from the Master Tracker, "+C.length+" contacts ("+g+" seen in the Gmail scan). Owner changes and notes made here are shared live. Base branch counts (jobs, subs, wins) come from the tracker as of upload and do not update on their own."}
 
 // drawers
@@ -238,7 +259,7 @@ function openB(id){var b=B.filter(function(x){return x.id===id})[0];if(!b)return
  if(!cs.length)body.appendChild(h("p","muted small","No contacts on file for this city yet."));
  cs.forEach(function(c){var d=h("div","cardc");var l=h("div");l.appendChild(h("b",null,c.role==="Branch line"?"Branch main line":c.name));if(c.title){l.appendChild(h("div","small muted",c.title))}var r=h("div","small");r.textContent=[c.phone,c.email].filter(Boolean).join("  |  ");l.appendChild(r);d.appendChild(l);var eb=h("button","ghost","Edit");eb.onclick=function(){$("bd").close();openC(c.id)};d.appendChild(eb);body.appendChild(d)});
  var ac=h("button","ghost","+ Add contact here");ac.disabled=!canWrite;ac.onclick=function(){$("bd").close();openC(null,{st:b.st,city:b.city,title:b.name})};
- var row=h("div","row");var cl=h("button","ghost","Close");cl.onclick=function(){$("bd").close()};row.appendChild(ac);row.appendChild(cl);row.appendChild(sv);body.appendChild(row);$("bd").showModal()}
+ bdHistoryInto(b,body);var row=h("div","row");var cl=h("button","ghost","Close");cl.onclick=function(){$("bd").close()};row.appendChild(ac);row.appendChild(cl);row.appendChild(sv);body.appendChild(row);$("bd").showModal()}
 
 var editC=null;
 function openC(id,pre){var c=id?C.filter(function(x){return x.id===id})[0]:null;editC=c;pre=pre||{};$("cTitle").textContent=c?"Edit contact":"Add contact";
@@ -259,7 +280,7 @@ $("exp").onclick=function(){var esc=function(v){v=String(v==null?"":v);return /[
  (typeof claude!=="undefined"?claude.use("downloads"):Promise.resolve(null)).then(function(d){if(d)return d.save({filename:name,data:csv}).catch(function(){});var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}).catch(function(){})};
 
 // controls
-Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){t.onclick=function(){tab=t.getAttribute("data-t");Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("on",x===t)});["branches","map","contacts","pending","jobs","stats"].forEach(function(k){$("v-"+k).hidden=k!==tab});render()}});
+Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){t.onclick=function(){tab=t.getAttribute("data-t");Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("on",x===t)});["branches","map","contacts","pending","jobs","stats","bd"].forEach(function(k){$("v-"+k).hidden=k!==tab});render()}});
 ["q","fState","fDisc","fWorked","fConf","fRole","fSrc","fMail","fNoLoc"].forEach(function(i){$(i).addEventListener(i==="q"?"input":"change",render)});
 Array.prototype.forEach.call(document.querySelectorAll("th[data-k]"),function(th){th.onclick=function(){var k=th.getAttribute("data-k");if(sortB===k)dirB=-dirB;else{sortB=k;dirB=1}render()}});
 Array.prototype.forEach.call(document.querySelectorAll("th[data-c]"),function(th){th.onclick=function(){var k=th.getAttribute("data-c");if(sortC===k)dirC=-dirC;else{sortC=k;dirC=1}render()}});
@@ -660,6 +681,76 @@ function renderStats(){
   $('stBody').innerHTML=tbl('By recruiter',tally('recruiter'))+tbl('By account manager',tally('am'))+wait+fl;
 }
 
+/* ---- Business development (collections "bdlog" and "bdstage") ---- */
+var BD_ST=['Not contacted','Reaching out','In conversation','Req received','Placed'],BD_COL=['#98A2B3','#1C7ED6','#7048E8','#0C8599','#2F9E44'];
+var BDL=[],BDLB={},BDS={},bdSortK='jobs',bdSortD=-1,BDB=null;
+function bdSet(list){BDL=list;BDLB={};list.forEach(function(d){if(d.branch)(BDLB[d.branch]=BDLB[d.branch]||[]).push(d)});Object.keys(BDLB).forEach(function(k){BDLB[k].sort(function(a,b){return b.at-a.at})});psNames(list.map(function(d){return d.by}))}
+function bdLast(id){var l=BDLB[id];return l&&l[0]||null}
+function bdWho(d){return d.byName||whoTxt(d.by)}
+function bdStage(b){
+  var m=BDS[b.id];if(m&&m.stage!=null&&m.stage!=='')return {i:+m.stage,manual:true};
+  var i=0,L=BDLB[b.id]||[];if(L.length)i=1;
+  L.forEach(function(d){var o=d.outcome;if(o==='Meeting set'||o==='In conversation')i=Math.max(i,2);if(o==='Req received')i=Math.max(i,3);if(o==='Placed')i=Math.max(i,4)});
+  if(b.jobs>0||(BDJ&&BDJ[b.id]))i=Math.max(i,3);if(b.wins>0)i=Math.max(i,4);
+  return {i:i,manual:false};
+}
+var BDJ=null;function bdJobs(){BDJ={};PS.jobs.forEach(function(j){if(!/\blhc\b/i.test(j.co||''))return;var b=jobBranch(j);if(b)BDJ[b.id]=(BDJ[b.id]||0)+1});return BDJ}
+function stgHtml(i,man){return '<span class="stg" style="--k:'+BD_COL[i]+'">'+esc(BD_ST[i])+'</span>'+(man?' <span class="ps-sub">(set by hand)</span>':'')}
+function ymd(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function openBDL(id){var b=B.filter(function(x){return x.id===id})[0];if(!b)return;BDB=b;
+  $('bdlBranch').textContent=b.name+' | Owner: '+b.owner;var dl=$('bdlContacts');dl.textContent='';contactsFor(b).forEach(function(c){if(c.role==='Branch line')return;var o=document.createElement('option');o.value=c.name;dl.appendChild(o)});
+  ['bdlContact','bdlNote','bdlNext','bdlDue'].forEach(function(i){$(i).value=''});$('bdlMsg').textContent=canWrite?'':'You need Contributor access to save outreach.';$('bdlSave').disabled=!canWrite;$('bdl').showModal()}
+$('bdlClose').onclick=function(){$('bdl').close()};
+$('bdlSave').onclick=function(){var b=BDB;if(!b||!db||!canWrite)return;var btn=this;
+  var d={branch:b.id,branchName:b.name,contact:$('bdlContact').value.trim(),method:$('bdlMethod').value,outcome:$('bdlOutcome').value,note:$('bdlNote').value.trim(),next:$('bdlNext').value.trim(),due:$('bdlDue').value||'',done:false,at:Date.now(),by:ME||null,src:'manual'};
+  btn.disabled=true;db.collection('bdlog').add(d).then(function(){btn.disabled=false;$('bdl').close();later()},function(){btn.disabled=false;$('bdlMsg').textContent='Could not save. Check your access and try again.'})};
+function bdDone(id){var d=BDL.filter(function(x){return x.id===id})[0];if(!d||!db||!canWrite)return;var o={};Object.keys(d).forEach(function(k){if(k!=='id')o[k]=d[k]});o.done=true;o.doneAt=Date.now();db.doc('bdlog/'+id).set(o).then(later,function(){banner('Could not save. You may have view-only access.')})}
+function bdSetStage(id,v){if(!db||!canWrite)return;db.doc('bdstage/'+id).set({stage:v===''?null:+v,at:Date.now(),by:ME||null}).then(later,function(){banner('Could not save. You may have view-only access.')})}
+function bdBranchName(id){var b=B.filter(function(x){return x.id===id})[0];return b?b.name:id}
+function renderBD(){
+  bdJobs();var today=ymd(new Date()),wk=Date.now()-7*DAY;
+  // due list
+  var due=BDL.filter(function(d){return d.next&&!d.done}).sort(function(a,b){return (a.due||'9999').localeCompare(b.due||'9999')});
+  var dueH='<div class="stbox"><h3>Next steps due</h3><table><tbody>'+(due.slice(0,25).map(function(d){var od=d.due&&d.due<today,td=d.due===today;
+    return '<tr><td>'+(d.due?'<span class="'+(od?'od':'')+'">'+esc(od?'Overdue '+d.due.slice(5).replace('-','/'):td?'Today':d.due.slice(5).replace('-','/'))+'</span>':'<span class="muted">No date</span>')+'</td><td><div class="ps-main">'+esc(d.next)+'</div><div class="ps-sub">'+esc(bdBranchName(d.branch))+(d.contact?' | '+esc(d.contact):'')+' | '+esc(bdWho(d))+'</div></td><td>'+(canWrite?'<button type="button" class="ghost" data-bddone="'+esc(d.id)+'" style="padding:3px 10px;font-size:12px">Done</button>':'')+'</td></tr>'}).join('')||'<tr><td class="muted">Nothing due. Add a next step when you log outreach.</td></tr>')+'</tbody></table></div>';
+  // activity this week
+  var OUT=['No answer','Left voicemail','Intro sent','Meeting set','In conversation','Req received','Placed','Not interested','Other'],act={};
+  BDL.forEach(function(d){if(d.at<wk)return;var n=bdWho(d);var o=act[n]=act[n]||{t:0};o.t++;o[d.outcome]=(o[d.outcome]||0)+1});
+  var used=OUT.filter(function(o){return Object.keys(act).some(function(n){return act[n][o]})});
+  var actH='<div class="stbox"><h3>Outreach in the last 7 days</h3><table><thead><tr><th>Person</th><th class="num">Total</th>'+used.map(function(o){return '<th class="num">'+esc(o)+'</th>'}).join('')+'</tr></thead><tbody>'+(Object.keys(act).sort(function(a,b){return act[b].t-act[a].t}).map(function(n){return '<tr><td>'+esc(n)+'</td><td class="num"><b>'+act[n].t+'</b></td>'+used.map(function(o){return '<td class="num">'+(act[n][o]||0)+'</td>'}).join('')+'</tr>'}).join('')||'<tr><td colspan="2" class="muted">No outreach logged yet this week.</td></tr>')+'</tbody></table></div>';
+  // pipeline
+  var own=['Rachael','Melissa','Ainsley','Unassigned'],pc={};own.forEach(function(o){pc[o]=[0,0,0,0,0]});B.forEach(function(b){var o=pc[b.owner]?b.owner:'Unassigned';pc[o][bdStage(b).i]++});
+  var pipH='<div class="stbox"><h3>Branches by stage</h3><table><thead><tr><th>Owner</th>'+BD_ST.map(function(s,i){return '<th class="num"><span class="ps-dot" style="--k:'+BD_COL[i]+'"></span> '+esc(s)+'</th>'}).join('')+'</tr></thead><tbody>'+own.map(function(o){return '<tr><td>'+esc(o)+'</td>'+pc[o].map(function(n){return '<td class="num">'+n+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table><div class="ps-sub" style="margin-top:6px">Req received and Placed also count branches with jobs or wins in the tracker or open jobs on the job sheet.</div></div>';
+  $('bdTop').innerHTML=dueH+actH+pipH;
+  // filters
+  var sf=$('bdStageF'),cur=sf.value;if(!sf.options.length){[['','All stages']].concat(BD_ST.map(function(s,i){return [String(i),s]})).forEach(function(q){var o=document.createElement('option');o.value=q[0];o.textContent=q[1];sf.appendChild(o)})}sf.value=cur;
+  var ss=$('bdState'),cs=ss.value,sts={};B.forEach(function(b){sts[b.st]=1});if(ss.options.length<2){ss.textContent='';[['','All states']].concat(Object.keys(sts).sort().map(function(x){return [x,x]})).forEach(function(q){var o=document.createElement('option');o.value=q[0];o.textContent=q[1];ss.appendChild(o)})}ss.value=cs;
+  var ow=$('bdOwner').value,stv=sf.value,st=ss.value,stale=$('bdStale').checked,q=$('bdQ').value.trim().toLowerCase(),cut=Date.now()-30*DAY;
+  var rows=B.map(function(b){var g=bdStage(b),l=bdLast(b.id);return {b:b,g:g,l:l,j:BDJ[b.id]||0}}).filter(function(x){var b=x.b;
+    if(ow&&b.owner!==ow)return false;if(stv!==''&&x.g.i!==+stv)return false;if(st&&b.st!==st)return false;if(stale&&x.l&&x.l.at>=cut)return false;
+    return !q||(b.name+' '+b.city+' '+b.st).toLowerCase().indexOf(q)>=0});
+  var k=bdSortK,dd=bdSortD;rows.sort(function(a,b){var x,y;
+    if(k==='jobs'){if(a.j!==b.j)return (a.j-b.j)*dd;x=a.l?a.l.at:0;y=b.l?b.l.at:0;return x-y}
+    if(k==='stage'){x=a.g.i;y=b.g.i}else if(k==='last'){x=a.l?a.l.at:0;y=b.l?b.l.at:0}else{x=String(k==='owner'?a.b.owner:a.b.name).toLowerCase();y=String(k==='owner'?b.b.owner:b.b.name).toLowerCase();return x<y?-dd:x>y?dd:0}
+    return (x-y)*dd});
+  var shown=rows.slice(0,400);
+  $('bdBody2').innerHTML=shown.map(function(x){var b=x.b,l=x.l;
+    var sel=canWrite?'<select data-bdst="'+esc(b.id)+'" style="padding:3px 6px;font-size:12px;margin-top:4px"><option value="">Auto</option>'+BD_ST.map(function(s,i){return '<option value="'+i+'"'+(x.g.manual&&x.g.i===i?' selected':'')+'>'+esc(s)+'</option>'}).join('')+'</select>':'';
+    return '<tr><td><div class="ps-main">'+esc(b.name)+'</div><div class="ps-sub">'+esc(b.city)+', '+esc(b.st)+' | '+esc(b.disc)+'</div></td><td><span class="pill o-'+esc(b.owner)+'">'+esc(b.owner)+'</span></td><td>'+stgHtml(x.g.i,x.g.manual)+'<div>'+sel+'</div></td>'+
+      '<td>'+(l?esc(mdTxt(new Date(l.at)))+' | '+esc(l.method)+', '+esc(l.outcome)+'<div class="ps-sub">'+esc(bdWho(l))+(l.contact?' with '+esc(l.contact):'')+'</div>':'<span class="muted">None logged</span>')+'</td>'+
+      '<td class="num">'+(x.j||'')+'</td><td><div class="ps-fu"><button type="button" data-bdlog="'+esc(b.id)+'">Log outreach</button><button type="button" class="ghost" data-bdopen="'+esc(b.id)+'">History</button></div></td></tr>'}).join('')||'<tr><td colspan="6" class="muted" style="padding:16px">Nothing matches these filters.</td></tr>';
+  $('bdNote').textContent='Showing '+shown.length+' of '+rows.length+' branches'+(rows.length>shown.length?' (first 400; narrow the filters to see more)':'')+'. '+BDL.length+' outreach attempts logged in total.';
+}
+function bdHistoryInto(b,body){
+  var g=bdStage(b),L=BDLB[b.id]||[],box=h('div','bdh');box.appendChild(h('h4',null,'Business development'));
+  var p=h('div');p.innerHTML='Stage: '+stgHtml(g.i,g.manual);box.appendChild(p);
+  if(!L.length)box.appendChild(h('p','muted small','No outreach logged yet.'));
+  L.slice(0,8).forEach(function(d){var r=h('div','small');r.style.margin='6px 0';r.innerHTML='<b>'+esc(mdTxt(new Date(d.at)))+'</b> '+esc(d.method)+', '+esc(d.outcome)+' | '+esc(bdWho(d))+(d.contact?' with '+esc(d.contact):'')+(d.note?'<div class="ps-sub">'+esc(d.note)+'</div>':'')+(d.next?'<div class="ps-sub">Next: '+esc(d.next)+(d.due?' by '+esc(d.due):'')+(d.done?' (done)':'')+'</div>':'');box.appendChild(r)});
+  var lb=h('button',null,'Log outreach');lb.onclick=function(){$('bd').close();openBDL(b.id)};box.appendChild(lb);body.appendChild(box);
+}
+function dlCsv(name,rows){var e=function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};var csv=rows.map(function(r){return r.map(e).join(',')}).join('\n');
+  (typeof claude!=='undefined'?claude.use('downloads'):Promise.resolve(null)).then(function(d){if(d)return d.save({filename:name,data:csv}).catch(function(){});var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();a.remove()}).catch(function(){})}
+
 /* ---- copy ---- */
 function copyText(t){
   if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t).then(function(){return true},function(){return fbCopy(t)});
@@ -777,6 +868,14 @@ $('psRefresh').onclick=function(){loadPS(false)};
 Array.prototype.forEach.call(document.querySelectorAll('th[data-oj]'),function(th){th.onclick=function(){var k=th.getAttribute('data-oj');if(ojSortK===k)ojSortD=-ojSortD;else{ojSortK=k;ojSortD=(k==='g'||k==='d'||k==='n')?-1:1}renderOJ()}});
 $('ojBody').onclick=function(e){var tr=e.target.closest('tr[data-ob]');if(tr&&typeof openB==='function')openB(tr.getAttribute('data-ob'))};
 $('stClient').onchange=function(){renderStats()};
+['bdOwner','bdStageF','bdState','bdStale'].forEach(function(i){$(i).onchange=function(){renderBD()}});$('bdQ').oninput=function(){renderBD()};
+Array.prototype.forEach.call(document.querySelectorAll('th[data-bs]'),function(th){th.onclick=function(){var k=th.getAttribute('data-bs');if(bdSortK===k)bdSortD=-bdSortD;else{bdSortK=k;bdSortD=(k==='jobs'||k==='stage')?-1:1}renderBD()}});
+$('bdBody2').onclick=function(e){var a=e.target.closest('button[data-bdlog]');if(a)return openBDL(a.getAttribute('data-bdlog'));var o=e.target.closest('button[data-bdopen]');if(o)return openB(o.getAttribute('data-bdopen'))};
+$('bdBody2').onchange=function(e){var s=e.target.closest('select[data-bdst]');if(s)bdSetStage(s.getAttribute('data-bdst'),s.value)};
+$('bdTop').onclick=function(e){var d=e.target.closest('button[data-bddone]');if(d)bdDone(d.getAttribute('data-bddone'))};
+$('bdExp').onclick=function(){dlCsv('lhc-outreach-log.csv',[['Date','Branch','City','State','Owner','By','Contact','How','Outcome','Notes','Next step','Due','Done','Source']].concat(BDL.slice().sort(function(a,b){return b.at-a.at}).map(function(d){var b=B.filter(function(x){return x.id===d.branch})[0]||{};return [ymd(new Date(d.at)),b.name||d.branchName||'',b.city||'',b.st||'',b.owner||'',bdWho(d),d.contact,d.method,d.outcome,d.note,d.next,d.due,d.done?'Yes':'',d.src==='gmail'?'Gmail':'Dashboard']})))};
+$('mapColor').onchange=function(){var st=this.value==='stage';$('legOwn').hidden=st;$('legStage').hidden=!st;render()};
+$('legStage').innerHTML=BD_ST.map(function(s,i){return '<span><i style="background:'+BD_COL[i]+'"></i>'+esc(s)+'</span>'}).join('')+'<span>Large dot = worked with.</span>';
 Array.prototype.forEach.call(document.querySelectorAll('#psF [data-f]'),function(el){var k=el.getAttribute('data-f');el.addEventListener(el.tagName==='INPUT'?'input':'change',function(){PF[k]=el.value;renderPS()});el.addEventListener('click',function(e){e.stopPropagation()})});
 $('psClearF').onclick=function(){Object.keys(PF).forEach(function(k){PF[k]=''});renderPS()};
 setInterval(function(){if(!document.hidden&&PS.src==='live')loadPS(true)},5*60*1000);
@@ -805,6 +904,8 @@ function localDb(){var K='lhc_dash_v1',subs={};function load(){try{return JSON.p
   db.collection("branchEdits").onSnapshot(function(s){bEdits={};s.docs.forEach(function(x){bEdits[x.id]=x.data()});later()},err);
   db.collection("contactEdits").onSnapshot(function(s){cEdits={};s.docs.forEach(function(x){cEdits[x.id]=x.data()});later()},err);
   db.collection("contactsAdded").onSnapshot(function(s){cAdded={};s.docs.forEach(function(x){cAdded[x.id]=x.data()});later()},err);
+  db.collection("bdlog").onSnapshot(function(s){bdSet(s.docs.map(function(x){return Object.assign({},x.data(),{id:x.id})}));later()},function(){});
+  db.collection("bdstage").onSnapshot(function(s){BDS={};s.docs.forEach(function(x){BDS[x.id]=x.data()});later()},function(){});
   db.collection("followups").onSnapshot(function(s){flSet(s.docs.map(function(x){return x.data()}));later()},function(){});
   if(!standalone)db.doc("sync/latest").onSnapshot(function(s){PS_SYNC=s.exists?s.data():null;if(PS.via!=='drive'&&PS.via!=='gviz'&&psApplySync())later()},function(){});
  }catch(e){banner("Shared saving is not available in this view.")}
