@@ -567,7 +567,7 @@ function psRowHtml(r,grouped){
    '<td><div class="ps-main">'+esc(ago)+'</div><div class="ps-sub">'+esc(dateTxt(r.date))+'</div></td>'+
    '<td><div class="ps-stat"><span class="ps-dot"></span>'+esc(r.k.label)+'</div><div class="ps-sub">'+esc(r.stage||'No status yet')+(r.state?' \u00b7 Job '+esc(r.state.toLowerCase()):'')+'</div>'+psUpd(r)+'</td>'+
    '<td>'+esc(r.recruiter)+'</td><td>'+esc(r.am)+'</td><td>'+jc+'</td>'+
-   '<td>'+(r.k.active?'<div class="ps-fu"><button type="button" data-fu="'+r.id+'" title="Recruiter: write the email asking the account manager to check in with the client">Recruiter</button><button type="button" class="ghost" data-cf="'+r.id+'" title="Account manager: write the message to send the client, with the branch contact">Client</button></div>'+(flTxt(r)?'<div class="fl">'+esc(flTxt(r))+'</div>':''):'')+'</td></tr>';
+   '<td>'+(r.k.active||r.k.key==='peach'?'<div class="ps-fu"><button type="button" data-fu="'+r.id+'" title="Recruiter: write the email asking the account manager to check in with the client">Recruiter</button><button type="button" class="ghost" data-cf="'+r.id+'" title="Account manager: write the message to send the client, with the branch contact">Client</button></div>'+(flTxt(r)?'<div class="fl">'+esc(flTxt(r))+'</div>':''):'')+'</td></tr>';
 }
 /* ---- follow-up log (shared, collection "followups") ---- */
 var FL={},FLLIST=[],ME=null,NAMES={},USERP=null;
