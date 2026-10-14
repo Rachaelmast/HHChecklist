@@ -96,7 +96,7 @@ a{color:var(--navy)}
   <div class="rule"><b>Standing rule:</b> whoever gets a req directly from a manager keeps that relationship and placement, regardless of the owner shown. States not assigned default to Rachael until reassigned. WV is parked (1 placement each, Ainsley and Rachael).</div>
   <div id="banner" class="banner" hidden></div>
   <div class="cards" id="cards"></div>
-  <div class="tabs"><button class="tab on" data-t="branches">Branches</button><button class="tab" data-t="map">Map</button><button class="tab" data-t="contacts">Contacts</button><button class="tab" data-t="pending">Pending Submissions<span id="pbadge" class="tag warn" style="display:none"></span></button><button class="tab" data-t="jobs">Open Jobs</button><button class="tab" data-t="stats">Team Stats</button><button class="tab" data-t="bd">Business Dev</button></div>
+  <div class="tabs"><button class="tab on" data-t="branches">Branches</button><button class="tab" data-t="map">Map</button><button class="tab" data-t="contacts">Contacts</button><button class="tab" data-t="pending">Pending Submissions<span id="pbadge" class="tag warn" style="display:none"></span></button><button class="tab" data-t="jobs">Open Jobs</button><button class="tab" data-t="stats">Team Stats</button><button class="tab" data-t="bd">Business Dev</button><button class="tab" data-t="lost">Declined Offers</button></div>
 
   <div id="filters" class="bar">
     <input type="search" id="q" placeholder="Search branch, city, contact, notes">
@@ -154,6 +154,13 @@ a{color:var(--navy)}
       <input type="search" id="bdQ" placeholder="Branch, city"></div>
     <div class="tablewrap"><table><thead><tr><th data-bs="name">Branch</th><th data-bs="owner">Owner</th><th data-bs="stage">Stage</th><th data-bs="last">Last outreach</th><th data-bs="jobs">Open jobs</th><th></th></tr></thead><tbody id="bdBody2"></tbody></table></div>
     <p class="muted" id="bdNote"></p>
+  </div>
+  <div id="v-lost" hidden>
+    <div class="bar" style="justify-content:space-between"><div><b>Declined and lost LHC offers</b> <span class="muted small">From the Redzone sheet (all months) and the Whiteboard. New declines on the live sheet show up here on their own. Add a reason to each one so patterns show.</span></div><button class="ghost" id="lostAdd">+ Add a declined offer</button></div>
+    <div class="stgrid" id="lostTop"></div>
+    <div class="bar" style="margin-top:12px"><select id="lostCat"></select><select id="lostYear"></select><input type="search" id="lostQ" placeholder="Nurse, city, recruiter"></div>
+    <div class="tablewrap"><table><thead><tr><th>Month</th><th>Nurse</th><th>Job</th><th>Recruiter / AM</th><th>What happened</th><th>Reason</th></tr></thead><tbody id="lostBody"></tbody></table></div>
+    <p class="muted" id="lostNote"></p>
   </div>
   <div class="foot" id="foot"></div>
 </div>
@@ -244,8 +251,8 @@ function rowsC(){var L=fC();L.sort(function(a,b){var x=String(sortC==="loc"?locO
 
 function stateOpts(){var s=$("fState"),cur=s.value,set={};B.forEach(function(b){if(b.st)set[b.st]=1});C.forEach(function(c){if(c.st)set[c.st]=1});s.textContent="";var o=h("option",null,"All states");o.value="";s.appendChild(o);Object.keys(set).sort().forEach(function(k){var x=h("option",null,k);x.value=k;s.appendChild(x)});s.value=set[cur]?cur:""}
 
-function render(){recompute();stateOpts();cards();var noF=tab==="pending"||tab==="jobs"||tab==="stats"||tab==="bd";$("filters").style.display=noF?"none":"";$("cards").style.display=noF?"none":"";psBadge();$("fDisc").style.display=tab==="contacts"?"none":"";$("fWorked").parentNode.style.display=tab==="contacts"?"none":"";$("lbConf").style.display=tab==="contacts"?"none":"";$("addB").style.display=tab==="contacts"?"":"none";
- if(tab==="branches")rowsB();else if(tab==="map")map();else if(tab==="pending")renderPS();else if(tab==="jobs")renderOJ();else if(tab==="stats")renderStats();else if(tab==="bd")renderBD();else rowsC();foot()}
+function render(){recompute();stateOpts();cards();var noF=tab==="pending"||tab==="jobs"||tab==="stats"||tab==="bd"||tab==="lost";$("filters").style.display=noF?"none":"";$("cards").style.display=noF?"none":"";psBadge();$("fDisc").style.display=tab==="contacts"?"none":"";$("fWorked").parentNode.style.display=tab==="contacts"?"none":"";$("lbConf").style.display=tab==="contacts"?"none":"";$("addB").style.display=tab==="contacts"?"":"none";
+ if(tab==="branches")rowsB();else if(tab==="map")map();else if(tab==="pending")renderPS();else if(tab==="jobs")renderOJ();else if(tab==="stats")renderStats();else if(tab==="bd")renderBD();else if(tab==="lost")renderLost();else rowsC();foot()}
 function foot(){var g=C.filter(function(c){return srcOf(c).indexOf("Gmail")>=0}).length;$("foot").textContent="Data loaded: "+B.length+" LHC branches from the Master Tracker, "+C.length+" contacts ("+g+" seen in the Gmail scan). Owner changes and notes made here are shared live. Base branch counts (jobs, subs, wins) come from the tracker as of upload and do not update on their own."}
 
 // drawers
@@ -281,7 +288,7 @@ $("exp").onclick=function(){var esc=function(v){v=String(v==null?"":v);return /[
  (typeof claude!=="undefined"?claude.use("downloads"):Promise.resolve(null)).then(function(d){if(d)return d.save({filename:name,data:csv}).catch(function(){});var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}).catch(function(){})};
 
 // controls
-Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){t.onclick=function(){tab=t.getAttribute("data-t");Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("on",x===t)});["branches","map","contacts","pending","jobs","stats","bd"].forEach(function(k){$("v-"+k).hidden=k!==tab});render()}});
+Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){t.onclick=function(){tab=t.getAttribute("data-t");Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("on",x===t)});["branches","map","contacts","pending","jobs","stats","bd","lost"].forEach(function(k){$("v-"+k).hidden=k!==tab});render()}});
 ["q","fState","fDisc","fWorked","fConf","fRole","fSrc","fMail","fNoLoc"].forEach(function(i){$(i).addEventListener(i==="q"?"input":"change",render)});
 Array.prototype.forEach.call(document.querySelectorAll("th[data-k]"),function(th){th.onclick=function(){var k=th.getAttribute("data-k");if(sortB===k)dirB=-dirB;else{sortB=k;dirB=1}render()}});
 Array.prototype.forEach.call(document.querySelectorAll("th[data-c]"),function(th){th.onclick=function(){var k=th.getAttribute("data-c");if(sortC===k)dirC=-dirC;else{sortC=k;dirC=1}render()}});
@@ -682,6 +689,40 @@ function renderStats(){
   $('stBody').innerHTML=tbl('By recruiter',tally('recruiter'))+tbl('By account manager',tally('am'))+wait+fl;
 }
 
+/* ---- Declined / lost offers (collection "declines", one doc per offer) ---- */
+var LOST=[],LOST_CATS=['Took a job elsewhere','Took another job with us','Schedule or on-call','Territory or driving','Pay','Personal or family','Stopped responding','Other','No reason recorded'];
+var LOST_TYPES=['Declined offer','Accepted an outside offer','Took another job with us','Backed out after accepting','Declined after interview','Declined (unclear if candidate or client)'];
+var MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function lostYm(m){var x=String(m||'').match(/^([A-Za-z]{3})\w*\.?\s+(\d{4})/);if(x)return x[2]+'-'+('0'+MON[x[1].toLowerCase()]).slice(-2);x=String(m||'').match(/^(\d{4})-(\d{2})/);return x?x[1]+'-'+x[2]:''}
+function lostMonTxt(ym){if(!ym)return '';var a=ym.split('-');return 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[+a[1]-1]+' '+a[0]}
+function lostLive(){var have={};LOST.forEach(function(d){have[nrm(d.name)+'|'+nrm(d.loc)]=1});
+  return PS.rows.filter(function(r){return isLhc(r)&&/declin|outside offer|backed out|accepted (another|other)/i.test(r.stage||'')&&!have[nrm(r.name)+'|'+nrm(r.loc)]}).map(function(r){var t=/with us/i.test(r.stage)?'Took another job with us':/outside/i.test(r.stage)?'Accepted an outside offer':'Declined offer';
+    return {id:'',name:r.name,title:r.title,loc:r.loc,rec:r.recruiter,am:r.am,ym:r.date?ymd(r.date).slice(0,7):'',type:t,reason:'',cat:t==='Took another job with us'?t:'No reason recorded',src:'Live Redzone sheet'}})}
+function lostSave(d){if(!db||!canWrite)return;var id=d.id||('d-'+(nrm(d.name)+'-'+nrm(d.loc)).slice(0,120));var o={};Object.keys(d).forEach(function(k){if(k!=='id')o[k]=d[k]});o.updated=Date.now();db.doc('declines/'+id).set(o).then(later,function(){banner('Could not save. You may have view-only access.')})}
+function renderLost(){
+  var all=LOST.concat(lostLive());
+  var cs=$('lostCat'),cv=cs.value;if(!cs.options.length){[['','All reasons']].concat(LOST_CATS.map(function(c){return [c,c]})).forEach(function(q){var o=document.createElement('option');o.value=q[0];o.textContent=q[1];cs.appendChild(o)})}cs.value=cv;
+  var ys=$('lostYear'),yv=ys.value,yrs={};all.forEach(function(d){if(d.ym)yrs[d.ym.slice(0,4)]=1});ys.textContent='';[['','All years']].concat(Object.keys(yrs).sort().reverse().map(function(y){return [y,y]})).forEach(function(q){var o=document.createElement('option');o.value=q[0];o.textContent=q[1];ys.appendChild(o)});ys.value=yrs[yv]?yv:'';
+  var q=$('lostQ').value.trim().toLowerCase(),L=all.filter(function(d){if(cs.value&&d.cat!==cs.value)return false;if(ys.value&&(d.ym||'').slice(0,4)!==ys.value)return false;return !q||[d.name,d.loc,d.rec,d.am,d.reason].join(' ').toLowerCase().indexOf(q)>=0});
+  L.sort(function(a,b){return (b.ym||'').localeCompare(a.ym||'')});
+  function box(title,fn,note){var m={};L.forEach(function(d){var k=fn(d)||'(blank)';m[k]=(m[k]||0)+1});var ks=Object.keys(m).sort(function(a,b){return m[b]-m[a]});
+    return '<div class="stbox"><h3>'+esc(title)+'</h3><table><tbody>'+(ks.slice(0,10).map(function(k){var pct=Math.round(m[k]*100/L.length);return '<tr><td>'+esc(k)+'</td><td class="num"><b>'+m[k]+'</b></td><td class="num muted">'+pct+'%</td></tr>'}).join('')||'<tr><td class="muted">None</td></tr>')+'</tbody></table>'+(note?'<div class="ps-sub" style="margin-top:6px">'+note+'</div>':'')+'</div>'}
+  var noR=L.filter(function(d){return d.cat==='No reason recorded'}).length;
+  $('lostTop').innerHTML=box('By reason',function(d){return d.cat},noR?noR+' have no reason yet. Add one in the table below.':'')+box('What happened',function(d){return d.type})+
+    box('By state',function(d){var m=String(d.loc||'').match(/([A-Z]{2})\s*$/);return m?m[1]:''})+box('By recruiter',function(d){return (d.rec||'').trim()})+box('By year',function(d){return (d.ym||'').slice(0,4)});
+  $('lostBody').innerHTML=L.map(function(d,i){var idx=all.indexOf(d);
+    var catSel=canWrite?'<select data-lc="'+idx+'" style="padding:3px 6px;font-size:12px">'+LOST_CATS.map(function(c){return '<option'+(c===d.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>':'<span class="tag">'+esc(d.cat)+'</span>';
+    var rIn=canWrite?'<input data-lr="'+idx+'" value="'+esc(d.reason||'')+'" placeholder="Why they said no" style="width:100%;min-width:160px;padding:4px 6px;font-size:13px;margin-top:4px">':'<div class="ps-sub">'+esc(d.reason||'')+'</div>';
+    var b=psBranch({client:'LHC Group',st:(String(d.loc).match(/([A-Z]{2})\s*$/)||[])[1]||'',city:String(d.loc).replace(/[,\s]+[A-Z]{2}\s*$/,''),title:d.title||''});
+    return '<tr><td>'+esc(lostMonTxt(d.ym))+'</td><td><div class="ps-main">'+esc(d.name)+'</div><div class="ps-sub">'+esc(d.src||'')+'</div></td><td>'+esc(d.title||'')+'<div class="ps-sub">'+esc(d.loc||'')+(b?' | Owner: '+esc(b.owner):'')+'</div></td><td>'+esc(d.rec||'')+'<div class="ps-sub">'+esc(d.am||'')+'</div></td><td>'+esc(d.type||'')+'</td><td>'+catSel+rIn+'</td></tr>'}).join('')||'<tr><td colspan="6" class="muted" style="padding:16px">Nothing matches these filters.</td></tr>';
+  $('lostBody').dataset.n=all.length;LOSTALL=all;
+  $('lostNote').textContent='Showing '+L.length+' of '+all.length+' declined or lost LHC offers.';
+}
+var LOSTALL=[];
+function lostAuto(r){r=String(r).toLowerCase();if(/with us/.test(r))return 'Took another job with us';if(/on.?call|weekend|schedule|hours|shift/.test(r))return 'Schedule or on-call';if(/territory|driv|dark|distance|commute|mileage|travel too far/.test(r))return 'Territory or driving';
+  if(/pay|rate|money|salary|low/.test(r))return 'Pay';if(/perm|closer to home|elsew|another (job|position|offer)|remote|took a job|other agency|contract with/.test(r))return 'Took a job elsewhere';if(/ghost|no response|stopped respond|never heard/.test(r))return 'Stopped responding';if(/family|personal|partner|duo|health|kids|child/.test(r))return 'Personal or family';return 'Other'}
+function lostEdit(idx,field,val){var d=LOSTALL[idx];if(!d)return;var n=Object.assign({},d);n[field]=val;if(field==='reason'&&(d.cat==='No reason recorded'||d.cat==='Other')&&val)n.cat=lostAuto(val);lostSave(n)}
+
 /* ---- Placements per branch (collection "placements", doc per branch id: {list:[{name,title,date,by,src,note}]}) ---- */
 function plcSave(b,list){if(!db||!canWrite)return Promise.reject();return db.doc('placements/'+b.id).set({list:list,updated:Date.now(),src:'edited'})}
 function plcInto(b,body){
@@ -882,6 +923,10 @@ $('psRefresh').onclick=function(){loadPS(false)};
 Array.prototype.forEach.call(document.querySelectorAll('th[data-oj]'),function(th){th.onclick=function(){var k=th.getAttribute('data-oj');if(ojSortK===k)ojSortD=-ojSortD;else{ojSortK=k;ojSortD=(k==='g'||k==='d'||k==='n')?-1:1}renderOJ()}});
 $('ojBody').onclick=function(e){var tr=e.target.closest('tr[data-ob]');if(tr&&typeof openB==='function')openB(tr.getAttribute('data-ob'))};
 $('stClient').onchange=function(){renderStats()};
+['lostCat','lostYear'].forEach(function(i){$(i).onchange=function(){renderLost()}});$('lostQ').oninput=function(){renderLost()};
+$('lostBody').onchange=function(e){var c=e.target.closest('select[data-lc]');if(c)return lostEdit(+c.getAttribute('data-lc'),'cat',c.value);var r=e.target.closest('input[data-lr]');if(r)lostEdit(+r.getAttribute('data-lr'),'reason',r.value.trim())};
+$('lostAdd').onclick=function(){if(!canWrite){banner('You need Contributor access to add a declined offer.');return}var n=prompt('Nurse name');if(!n)return;var l=prompt('City, ST (for example: Tucson, AZ)')||'';var r=prompt('Why did they say no? (optional)')||'';var t=new Date();
+  lostSave({name:n.trim(),title:'',loc:l.trim(),rec:'',am:'',ym:ymd(t).slice(0,7),type:'Declined offer',reason:r.trim(),cat:r?'Other':'No reason recorded',src:'Added in dashboard'})};
 ['bdOwner','bdStageF','bdState','bdStale'].forEach(function(i){$(i).onchange=function(){renderBD()}});$('bdQ').oninput=function(){renderBD()};
 Array.prototype.forEach.call(document.querySelectorAll('th[data-bs]'),function(th){th.onclick=function(){var k=th.getAttribute('data-bs');if(bdSortK===k)bdSortD=-bdSortD;else{bdSortK=k;bdSortD=(k==='jobs'||k==='stage')?-1:1}renderBD()}});
 $('bdBody2').onclick=function(e){var a=e.target.closest('button[data-bdlog]');if(a)return openBDL(a.getAttribute('data-bdlog'));var o=e.target.closest('button[data-bdopen]');if(o)return openB(o.getAttribute('data-bdopen'))};
@@ -918,6 +963,7 @@ function localDb(){var K='lhc_dash_v1',subs={};function load(){try{return JSON.p
   db.collection("branchEdits").onSnapshot(function(s){bEdits={};s.docs.forEach(function(x){bEdits[x.id]=x.data()});later()},err);
   db.collection("contactEdits").onSnapshot(function(s){cEdits={};s.docs.forEach(function(x){cEdits[x.id]=x.data()});later()},err);
   db.collection("contactsAdded").onSnapshot(function(s){cAdded={};s.docs.forEach(function(x){cAdded[x.id]=x.data()});later()},err);
+  db.collection("declines").onSnapshot(function(s){LOST=s.docs.map(function(x){return Object.assign({},x.data(),{id:x.id})});later()},function(){});
   db.collection("placements").onSnapshot(function(s){PLC={};s.docs.forEach(function(x){PLC[x.id]=x.data()});PLCREADY=true;later()},function(){});
   db.collection("bdlog").onSnapshot(function(s){bdSet(s.docs.map(function(x){return Object.assign({},x.data(),{id:x.id})}));later()},function(){});
   db.collection("bdstage").onSnapshot(function(s){BDS={};s.docs.forEach(function(x){BDS[x.id]=x.data()});later()},function(){});
