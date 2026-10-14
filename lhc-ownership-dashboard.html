@@ -109,7 +109,7 @@ a{color:var(--navy)}
   </div>
 
   <div id="v-branches"><div class="tablewrap"><table><thead><tr>
-    <th data-k="st">State</th><th data-k="city">City</th><th data-k="name">Branch</th><th data-k="disc">Type</th><th data-k="owner">Owner</th><th data-k="conf">Status</th><th data-k="jobs">Jobs</th><th data-k="subs">Subs</th><th data-k="wins">Wins</th><th data-k="nc">Contacts</th></tr></thead><tbody id="rowsB"></tbody></table></div><p class="muted" id="countB"></p></div>
+    <th data-k="st">State</th><th data-k="city">City</th><th data-k="name">Branch</th><th data-k="disc">Type</th><th data-k="owner">Owner</th><th data-k="conf">Status</th><th data-k="jobs">Jobs</th><th data-k="subs">Subs</th><th data-k="wins">Placements</th><th data-k="nc">Contacts</th></tr></thead><tbody id="rowsB"></tbody></table></div><p class="muted" id="countB"></p></div>
 
   <div id="v-map" hidden><div class="mapbox"><div style="margin:2px 4px 6px"><select id="mapColor"><option value="owner">Color by owner</option><option value="stage">Color by business development stage</option></select></div><svg class="map" id="svg" viewBox="0 0 975 610" xmlns="http://www.w3.org/2000/svg"></svg>
     <div class="legend" id="legStage" hidden></div><div class="legend" id="legOwn"><span><i style="background:var(--navy)"></i>Rachael</span><span><i style="background:var(--sky)"></i>Melissa</span><span><i style="background:var(--purple)"></i>Ainsley</span><span><i style="background:var(--red)"></i>Unassigned</span><span>Large dot = worked with. Small dot = branch we have not worked yet.</span></div>
@@ -203,7 +203,8 @@ function h(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)
 function key(s){return String(s||"").toLowerCase().replace(/[^a-z ]/g,"").trim()}
 function banner(m){var b=$("banner");b.hidden=!m;b.textContent=m||""}
 
-function effB(){return BR.map(function(b){var e=bEdits[b.id];if(!e)return b;var o=Object.assign({},b);if(e.owner){o.owner=e.owner;o.conf="Confirmed"}o.my=e.note||"";o.edited=true;return o})}
+var PLC={},PLCREADY=false;
+function effB(){return BR.map(function(b){var e=bEdits[b.id],pl=PLC[b.id];if(!e&&!PLCREADY)return b;var o=Object.assign({},b);if(PLCREADY){o.pl=pl&&pl.list||[];o.wins=o.pl.length}if(!e)return o;if(e.owner){o.owner=e.owner;o.conf="Confirmed"}o.my=e.note||"";o.edited=true;return o})}
 function effC(){var out=[];CT.forEach(function(c){var e=cEdits[c.id];if(e&&e.hidden)return;out.push(e?Object.assign({},c,e,{id:c.id,edited:true}):c)});Object.keys(cAdded).forEach(function(id){var c=Object.assign({src:["Added in dashboard"],role:"Manager"},cAdded[id],{id:id,added:true});out.push(c)});return out}
 var B=[],C=[],CK={};
 function recompute(){B=effB();C=effC();CK={};C.forEach(function(c){if(c.st&&c.city){var k=c.st+"|"+key(c.city);(CK[k]=CK[k]||[]).push(c)}});B.forEach(function(b){b.nc=(CK[b.st+"|"+key(b.city)]||[]).length})}
@@ -250,12 +251,12 @@ function foot(){var g=C.filter(function(c){return srcOf(c).indexOf("Gmail")>=0})
 // drawers
 function openB(id){var b=B.filter(function(x){return x.id===id})[0];if(!b)return;var body=$("bdBody");body.textContent="";
  body.appendChild(h("h3",null,b.name));var p=h("p","muted",b.city+", "+b.st+" | "+b.disc);p.style.margin="0";body.appendChild(p);
- var kv=h("div","kv");[["Owner",null],["Status",b.conf],["Address",b.addr||"Not on file"],["Phone",b.phone||"Not on file"],["Manager on file",b.mgr||"None on file"],["History",b.jobs+" jobs, "+b.subs+" subs, "+b.wins+" wins, "+b.loss+" losses"],["Tracker note",b.note||"None"]].forEach(function(r){kv.appendChild(h("div",null,r[0]));var v=h("div");if(r[0]==="Owner")v.appendChild(pill(b.owner));else v.textContent=r[1];kv.appendChild(v)});body.appendChild(kv);
+ var kv=h("div","kv");[["Owner",null],["Status",b.conf],["Address",b.addr||"Not on file"],["Phone",b.phone||"Not on file"],["Manager on file",b.mgr||"None on file"],["History",b.jobs+" jobs, "+b.subs+" subs, "+b.wins+" placements, "+b.loss+" losses"],["Tracker note",b.note||"None"]].forEach(function(r){kv.appendChild(h("div",null,r[0]));var v=h("div");if(r[0]==="Owner")v.appendChild(pill(b.owner));else v.textContent=r[1];kv.appendChild(v)});body.appendChild(kv);
  var sel=h("select");OWN.forEach(function(o){var x=h("option",null,o);x.value=o;sel.appendChild(x)});sel.value=b.owner;sel.disabled=!canWrite;
  var ta=h("textarea");ta.style.width="100%";ta.style.minHeight="60px";ta.placeholder="Team note (shared)";ta.value=b.my||"";ta.disabled=!canWrite;
  var lab=h("label","small muted","Change owner");lab.style.display="block";body.appendChild(lab);body.appendChild(sel);var lab2=h("label","small muted","Team note");lab2.style.display="block";lab2.style.marginTop="8px";body.appendChild(lab2);body.appendChild(ta);
  var sv=h("button",null,"Save");sv.disabled=!canWrite;sv.onclick=function(){if(!db)return;db.doc("branchEdits/"+b.id).set({owner:sel.value,note:ta.value.trim(),updated:Date.now()}).then(function(){$("bd").close()}).catch(function(){banner("Could not save. You may have view-only access.")})};
- var cs=contactsFor(b);body.appendChild(h("h4",null,"Contacts in "+b.city+", "+b.st+" ("+cs.length+")"));
+ plcInto(b,body);var cs=contactsFor(b);body.appendChild(h("h4",null,"Contacts in "+b.city+", "+b.st+" ("+cs.length+")"));
  if(!cs.length)body.appendChild(h("p","muted small","No contacts on file for this city yet."));
  cs.forEach(function(c){var d=h("div","cardc");var l=h("div");l.appendChild(h("b",null,c.role==="Branch line"?"Branch main line":c.name));if(c.title){l.appendChild(h("div","small muted",c.title))}var r=h("div","small");r.textContent=[c.phone,c.email].filter(Boolean).join("  |  ");l.appendChild(r);d.appendChild(l);var eb=h("button","ghost","Edit");eb.onclick=function(){$("bd").close();openC(c.id)};d.appendChild(eb);body.appendChild(d)});
  var ac=h("button","ghost","+ Add contact here");ac.disabled=!canWrite;ac.onclick=function(){$("bd").close();openC(null,{st:b.st,city:b.city,title:b.name})};
@@ -275,7 +276,7 @@ $("addB").onclick=function(){openC(null)};
 // export
 $("exp").onclick=function(){var esc=function(v){v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};var rows,name;
  if(tab==="contacts"){name="lhc-contacts.csv";rows=[["Name","Title","Org","City","State","Phone","Email","Role","Source"]].concat(fC().map(function(c){return [c.name,c.title,c.org,c.city,c.st,c.phone,c.email,c.role,srcOf(c)]}))}
- else{name="lhc-branches.csv";rows=[["State","City","Branch","Type","Owner","Status","Worked with","Jobs","Subs","Wins","Address","Phone","Manager on file","Notes"]].concat(fB().map(function(b){return [b.st,b.city,b.name,b.disc,b.owner,b.conf,b.worked?"Yes":"No",b.jobs,b.subs,b.wins,b.addr,b.phone,b.mgr,[b.note,b.my].filter(Boolean).join(" | ")]}))}
+ else{name="lhc-branches.csv";rows=[["State","City","Branch","Type","Owner","Status","Worked with","Jobs","Subs","Placements","Address","Phone","Manager on file","Notes"]].concat(fB().map(function(b){return [b.st,b.city,b.name,b.disc,b.owner,b.conf,b.worked?"Yes":"No",b.jobs,b.subs,b.wins,b.addr,b.phone,b.mgr,[b.note,b.my].filter(Boolean).join(" | ")]}))}
  var csv=rows.map(function(r){return r.map(esc).join(",")}).join("\n");
  (typeof claude!=="undefined"?claude.use("downloads"):Promise.resolve(null)).then(function(d){if(d)return d.save({filename:name,data:csv}).catch(function(){});var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}).catch(function(){})};
 
@@ -681,6 +682,19 @@ function renderStats(){
   $('stBody').innerHTML=tbl('By recruiter',tally('recruiter'))+tbl('By account manager',tally('am'))+wait+fl;
 }
 
+/* ---- Placements per branch (collection "placements", doc per branch id: {list:[{name,title,date,by,src,note}]}) ---- */
+function plcSave(b,list){if(!db||!canWrite)return Promise.reject();return db.doc('placements/'+b.id).set({list:list,updated:Date.now(),src:'edited'})}
+function plcInto(b,body){
+  var L=(PLC[b.id]&&PLC[b.id].list)||[];var box=h('div','bdh');box.appendChild(h('h4',null,'Placements ('+L.length+')'));
+  if(!L.length)box.appendChild(h('p','muted small','No placements on record for this branch.'));
+  L.forEach(function(p,i){var r=h('div','cardc');var l=h('div');l.appendChild(h('b',null,p.name));l.appendChild(h('div','small muted',[p.title,p.date?'Start '+p.date:'',p.by?'By '+p.by:'',p.src].filter(Boolean).join(' | ')));if(p.note)l.appendChild(h('div','small muted',p.note));r.appendChild(l);
+    if(canWrite){var x=h('button','ghost','Remove');x.style.padding='3px 10px';x.onclick=function(){if(!confirm('Remove '+p.name+' from this branch?'))return;var n=L.slice();n.splice(i,1);plcSave(b,n).then(function(){$('bd').close()},function(){banner('Could not save. You may have view-only access.')})};r.appendChild(x)}box.appendChild(r)});
+  if(canWrite){var f=h('div','bar');f.style.marginTop='6px';var nm=h('input');nm.placeholder='Nurse name';var dt=h('input');dt.type='date';var ti=h('select');['Home Health RN','Hospice RN','Home Health LPN','Other'].forEach(function(t){var o=h('option',null,t);ti.appendChild(o)});var ad=h('button',null,'+ Add placement');
+    ad.onclick=function(){var n=nm.value.trim();if(!n){nm.style.borderColor='var(--red)';return}var list=L.concat([{name:n,title:ti.value,date:dt.value||'',by:'',src:'Added in dashboard'}]);ad.disabled=true;plcSave(b,list).then(function(){$('bd').close()},function(){ad.disabled=false;banner('Could not save. You may have view-only access.')})};
+    [nm,ti,dt,ad].forEach(function(x){f.appendChild(x)});box.appendChild(f)}
+  body.appendChild(box);
+}
+
 /* ---- Business development (collections "bdlog" and "bdstage") ---- */
 var BD_ST=['Not contacted','Reaching out','In conversation','Req received','Placed'],BD_COL=['#98A2B3','#1C7ED6','#7048E8','#0C8599','#2F9E44'];
 var BDL=[],BDLB={},BDS={},bdSortK='jobs',bdSortD=-1,BDB=null;
@@ -904,6 +918,7 @@ function localDb(){var K='lhc_dash_v1',subs={};function load(){try{return JSON.p
   db.collection("branchEdits").onSnapshot(function(s){bEdits={};s.docs.forEach(function(x){bEdits[x.id]=x.data()});later()},err);
   db.collection("contactEdits").onSnapshot(function(s){cEdits={};s.docs.forEach(function(x){cEdits[x.id]=x.data()});later()},err);
   db.collection("contactsAdded").onSnapshot(function(s){cAdded={};s.docs.forEach(function(x){cAdded[x.id]=x.data()});later()},err);
+  db.collection("placements").onSnapshot(function(s){PLC={};s.docs.forEach(function(x){PLC[x.id]=x.data()});PLCREADY=true;later()},function(){});
   db.collection("bdlog").onSnapshot(function(s){bdSet(s.docs.map(function(x){return Object.assign({},x.data(),{id:x.id})}));later()},function(){});
   db.collection("bdstage").onSnapshot(function(s){BDS={};s.docs.forEach(function(x){BDS[x.id]=x.data()});later()},function(){});
   db.collection("followups").onSnapshot(function(s){flSet(s.docs.map(function(x){return x.data()}));later()},function(){});
