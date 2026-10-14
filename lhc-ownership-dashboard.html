@@ -613,7 +613,8 @@ function renderPS(){
 }
 function psBadge(){
   var b=$('pbadge');if(!PS.rows.length){b.style.display='none';return}
-  psClassify();var n=PS.rows.filter(function(r){return !r.prev&&r.k.key==='orange'&&isLhc(r)}).length;b.textContent=n;b.style.display=n?'':'none';
+  psClassify();var L=PS.rows.filter(function(r){return !r.prev&&r.k.active&&isLhc(r)}),n=L.filter(function(r){return r.k.key==='orange'}).length;
+  b.textContent=L.length+' LHC active'+(n?', '+n+' need follow-up':'');b.className='tag'+(n?' warn':'');b.title='Active LHC Group submissions. Need follow-up means no update in 72 hours or more.';b.style.display=L.length?'':'none';
 }
 
 /* ---- Open LHC jobs ---- */
