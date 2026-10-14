@@ -136,7 +136,7 @@ a{color:var(--navy)}
   <div class="row"><button type="button" class="danger" id="cDel">Remove</button><button type="button" class="ghost" id="cCancel">Cancel</button><button type="submit" id="cSave">Save</button></div></form></dialog>
 
 
-<dialog id="fu"><h3 id="fuTitle" style="margin:0 0 6px">Request a follow up</h3><div class="muted small" id="fuInfo" style="margin-bottom:10px"></div>
+<dialog id="fu"><h3 id="fuTitle" style="margin:0 0 6px">Request a follow up</h3><div class="muted small" id="fuInfo" style="margin-bottom:6px"></div><div class="small" id="fuCc" style="margin-bottom:10px"></div>
   <div id="fuWhenWrap"><label class="small muted" id="fuWhenL" for="fuWhen"></label><input id="fuWhen" style="width:100%" placeholder="For example: today by phone, or 10/3 by text" autocomplete="off"></div>
   <div class="banner" id="fuOutNote" style="display:none"></div><div class="plain" id="fuOut" style="display:none"></div>
   <p class="small muted" id="fuHint" style="margin:8px 0 0">Send this as a reply in the same email thread as the original submission so the history stays in one thread.</p>
@@ -144,7 +144,7 @@ a{color:var(--navy)}
 <dialog id="cfm"><h3 id="cfTitle" style="margin:0 0 6px">Client follow up</h3><div class="muted small" id="cfInfo"></div><div id="cfOwner" class="small" style="margin:6px 0 10px"></div>
   <div class="grid"><label class="full">Branch contact<select id="cfPick"></select></label>
   <label>Greeting name (edit if needed)<input id="cfContact" placeholder="Contact name"></label><label>Your name for the sign-off<input id="cfMe" placeholder="Your name"></label></div>
-  <div id="cfEmailLine" class="small" style="margin:8px 0"></div><div class="small muted" id="cfTo"></div>
+  <div id="cfEmailLine" class="small" style="margin:8px 0"></div><div class="small muted" id="cfTo"></div><div class="small" id="cfCc" style="margin:4px 0"></div>
   <div class="bar" style="margin-top:10px"><span class="seg" id="cfScope"><button data-v="one" class="on">One candidate</button><button data-v="all" id="cfAll">All active at this branch</button></span><span class="seg" id="cfKind"><button data-v="new">Just submitted</button><button data-v="one">Follow-up</button></span></div>
   <div class="small muted" id="cfKindRow" style="margin:0 0 6px">Just submitted is the first 48 hours. Follow-up is after that.</div>
   <div class="small" style="margin:6px 0"><b>Subject:</b> <span id="cfSubj"></span> <button class="ghost" id="cfCopySubj" style="padding:3px 10px;font-size:12px">Copy subject</button></div>
@@ -489,6 +489,16 @@ function copyText(t){
 function fbCopy(t){try{var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();var ok=document.execCommand('copy');a.remove();return ok}catch(e){return false}}
 function flashBtn(btn,msg){var o=btn.getAttribute('data-l')||btn.textContent;btn.setAttribute('data-l',o);btn.textContent=msg;setTimeout(function(){btn.textContent=o},1500)}
 
+/* ---- UHG sourcing CC, by state (LHC only) ---- */
+var UHG_CC=[{name:'Abbey DeGoey',email:'abbey.degoey@uhg.com',region:'East Region',st:'CT DE FL GA MA MD NC NH NJ NY PA RI SC VA WV'.split(' ')},
+  {name:'Kelly Peterson',email:'kelly_j_peterson@uhg.com',region:'Central and West Regions',st:'AL AR AZ CA CO ID IL IN KY LA MI MN MO MS NM NV OH OK OR TN TX WA'.split(' ')}];
+function uhgCc(r){if(!isLhc(r)||!r.st)return null;return UHG_CC.filter(function(p){return p.st.indexOf(r.st)>=0})[0]||null}
+function ccLine(id,r){var el=$(id),p=uhgCc(r);
+  if(!p){el.innerHTML=isLhc(r)?'<span class="muted">No UHG sourcing CC set for '+esc(r.st||'this location')+'.</span>':'';return}
+  el.innerHTML='<b>CC (UHG '+esc(p.region)+'):</b> '+esc(p.name)+', '+esc(p.email)+' <button type="button" class="ghost" data-cc="'+esc(p.email)+'" style="padding:3px 10px;font-size:12px">Copy CC</button>';
+}
+['fuCc','cfCc'].forEach(function(id){$(id).onclick=function(e){var b=e.target.closest('button[data-cc]');if(b)copyText(b.getAttribute('data-cc')).then(function(ok){flashBtn(b,ok?'Copied':'Select and copy')})}});
+
 /* ---- Recruiter follow-up (email to the account manager) ---- */
 var FU=null,CF=null;
 function recruiterEmail(r,when){
@@ -498,7 +508,7 @@ function recruiterEmail(r,when){
 function openFU(id){
   var r=PS.rows[id];if(!r)return;FU=r;$('fuTitle').textContent='Request a follow up: '+r.name;
   $('fuInfo').textContent=[r.title,r.client,r.loc,r.req?'Req ID '+r.req:'','submitted '+mdTxt(r.date),r.recruiter+' to '+(r.am||'the account manager')].filter(Boolean).join(' | ');
-  $('fuWhenWrap').style.display='';$('fuOut').style.display='none';$('fuGo').style.display='';$('fuCopy').style.display='none';$('fuWhen').value='';$('fuWhenL').textContent='When did you last confirm that '+r.name+' is still available?';
+  ccLine('fuCc',r);$('fuWhenWrap').style.display='';$('fuOut').style.display='none';$('fuGo').style.display='';$('fuCopy').style.display='none';$('fuWhen').value='';$('fuWhenL').textContent='When did you last confirm that '+r.name+' is still available?';
   $('fu').showModal();
 }
 $('fuGo').onclick=function(){var w=$('fuWhen').value.trim();if(!w){$('fuWhen').style.borderColor='var(--red)';return}
@@ -533,6 +543,7 @@ function cfRender(){
   $('cfTo').textContent=c?[c.name,c.title].filter(Boolean).join(', '):'';
   $('cfEmailLine').innerHTML=c?[c.email?'<b>To:</b> '+esc(c.email):'<span class="muted">No email on file for this contact</span>',c.phone?'<b>Phone:</b> '+esc(c.phone):''].filter(Boolean).join(' &nbsp;|&nbsp; '):'';
   $('cfCopyEmail').style.display=c&&c.email?'':'none';
+  ccLine('cfCc',r);
 }
 function openCF(id){
   var r=PS.rows[id];if(!r)return;
