@@ -1,0 +1,15 @@
+# CLAUDE.md
+
+## Working with Rachael
+- Never ask the user to do something manually that you can do for them. Check your MCP servers, tools and connectors first; if you can do it, do it yourself.
+- No hallucinations. Only state what you have checked. Say plainly when something is unknown or did not work.
+- The user is not a developer. Explain changes in plain English, in a short list.
+- No em dashes in any text shown to users. Keep wording short and plain.
+
+## LHC Ownership Dashboard
+- Source file: `lhc-ownership-dashboard.html` (single self-contained file, no build step). Backup: `lhc-ownership-dashboard.backup.html`.
+- Published (team uses this): https://claude.ai/artifact/VynMtnxtra1asLNNA2sseq
+- Do not change the BR, CT, ST or SNAP data arrays in the file.
+- Contacts found in Gmail go into the published page's shared database, collection `contactsAdded` (doc id `gm-<email slug>`, `src: ["Gmail scan"]`). Fixes to built-in contacts go in `contactEdits/<contact id>`.
+- Connected Gmail is rachaelskybridgehealthcare@gmail.com. LHC emails arrive there as forwards from the work address, so contacts are inside the forwarded bodies. LHC Group staff only.
+- A daily routine runs the Gmail contact scan at 6:52 AM Eastern in the original Claude session.
