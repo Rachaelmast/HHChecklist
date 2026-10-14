@@ -14,3 +14,6 @@
 - Connected Gmail is rachaelskybridgehealthcare@gmail.com. LHC emails arrive there as forwards from the work address, so contacts are inside the forwarded bodies. LHC Group staff only.
 - A daily routine runs the Gmail contact scan at 6:52 AM Eastern in the original Claude session.
 - Pending Submissions on the published page: live every 5 minutes for viewers with the Google Drive connector; everyone else reads an hourly copy in shared data `sync/latest` (fields `pending`, `jobs0..2` as CSV, `at`). Three fresh-session routines refresh it (Eastern time): hourly 9am-6pm plus 6:30pm Mon-Thu, hourly 9am-5pm Fri, none on weekends; they run on claude-haiku-5-5 (about $0.02 per run); `tools/sync_sheets.py` builds the same document by hand.
+- Follow-up log: collection `followups` (fields key = rowKey(name + req or title+location), kind recruiter|client, at, by user id). Logged follow-ups in the last 48 hours turn orange/yellow rows blue.
+- Tabs added: Open Jobs (LHC jobs from the job sheet; matched to submissions by Req ID digits or title+city+state) and Team Stats (from the Redzone sheet only, not all-time).
+- Managers can cover several locations, so duplicate contacts are expected. Do not merge them.
