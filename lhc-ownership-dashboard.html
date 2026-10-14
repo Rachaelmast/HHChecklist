@@ -72,8 +72,13 @@ a{color:var(--navy)}
 .plain{white-space:pre-wrap;background:var(--hover);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:14px}
 #cfText{width:100%;min-height:210px;font:14px/1.45 inherit}
 .tab .tag{margin-left:6px}
+#v-pending thead{position:sticky;top:0;z-index:2}#v-pending th{position:static}
+.psf th{cursor:default;text-transform:none;letter-spacing:0;padding:4px 6px 8px;font-weight:400}
+.psf input,.psf select{width:100%;min-width:90px;padding:4px 6px;font-size:13px;border-radius:6px}
+.psf .on{border-color:var(--navy);outline:1px solid var(--navy)}
+@media (max-width:700px){.psf input,.psf select{font-size:16px}}
 
-@media print{.bar,.tabs,.noprint,.cards,button{display:none!important}body{background:#fff;color:#000}.tablewrap{max-height:none;overflow:visible}.pill{background:#fff!important;color:#000;border:1px solid #000}th{position:static}}
+@media print{.bar,.tabs,.noprint,.cards,button{display:none!important}body{background:#fff;color:#000}.tablewrap{max-height:none;overflow:visible}.pill{background:#fff!important;color:#000;border:1px solid #000}th{position:static}#v-pending thead{position:static}}
 </style>
 </head>
 <body>
@@ -110,12 +115,12 @@ a{color:var(--navy)}
 
 
   <div id="v-pending" hidden>
-    <div class="bar" style="justify-content:space-between"><div><b>Pending Submissions</b> <span class="muted small">Synced from the Home Health Redzone sheet. Use Recruiter and Client to follow up. Finished ones drop off 24 hours after they close.</span></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="psChip" class="tag">Not loaded</span><button class="ghost" id="psRefresh">Refresh</button></div></div>
+    <div class="bar" style="justify-content:space-between"><div><b>Pending Submissions</b> <span class="muted small">Synced from the Home Health Redzone sheet. Use Recruiter and Client to follow up. Finished ones drop off 24 hours after they close.</span></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="psChip" class="tag">Not loaded</span><button class="ghost" id="psRefresh">Refresh</button><span id="psFN" class="tag warn" style="display:none"></span><button class="ghost" id="psClearF" style="display:none">Clear filters</button></div></div>
     <div class="pstats" id="psStats"></div>
     <div class="bar"><span class="seg" id="psView"><button class="on" data-v="all">All submissions</button><button data-v="active">Active</button><button data-v="done">Recently closed</button><button data-v="halted">Halted</button></span>
       <span class="seg" id="psGroup"><button class="on" data-v="sub">By submission</button><button data-v="cand">By candidate</button></span>
       <select id="psClient"></select><input type="search" id="psQ" placeholder="Candidate, client, city, recruiter, req ID"></div>
-    <div class="tablewrap"><table><thead><tr><th data-p="name">Candidate</th><th data-p="client">Job</th><th data-p="date">Submitted</th><th data-p="attn">Application status</th><th data-p="recruiter">Recruiter</th><th data-p="am">Account manager</th><th>Job on the job sheet</th><th>Follow-up</th></tr></thead><tbody id="psBody"></tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th data-p="name">Candidate</th><th data-p="client">Job</th><th data-p="date">Submitted</th><th data-p="attn">Application status</th><th data-p="recruiter">Recruiter</th><th data-p="am">Account manager</th><th>Job on the job sheet</th><th>Follow-up</th></tr><tr class="psf noprint" id="psF"><th><input type="search" data-f="cand" placeholder="Name" aria-label="Filter by candidate"></th><th><input type="search" data-f="job" placeholder="Title, client, city, req ID" aria-label="Filter by job"></th><th><select data-f="sub" aria-label="Filter by submitted date"><option value="">Any</option><option value="today">Today</option><option value="48h">Last 48 hours</option><option value="3to7">3 to 7 days ago</option><option value="8plus">8+ days ago</option><option value="none">No date</option></select></th><th><select data-f="stat" aria-label="Filter by application status"></select></th><th><select data-f="rec" aria-label="Filter by recruiter"></select></th><th><select data-f="am" aria-label="Filter by account manager"></select></th><th><select data-f="sheet" aria-label="Filter by job on the job sheet"><option value="">Any</option><option value="one">Open</option><option value="none">Not on the job sheet</option><option value="many">Multiple matching jobs</option><option value="noloc">No location on the row</option><option value="na">Not tracked on the sheet</option></select></th><th><select data-f="fu" aria-label="Filter by last updated"><option value="">Any</option><option value="never">Never updated since submitted</option><option value="48h">Updated in the last 48 hours</option><option value="3to7">Updated 3 to 7 days ago</option><option value="8plus">Updated 8+ days ago</option></select></th></tr></thead><tbody id="psBody"></tbody></table></div>
     <p class="muted" id="psNote"></p>
   </div>
   <div class="foot" id="foot"></div>
@@ -242,7 +247,7 @@ Array.prototype.forEach.call(document.querySelectorAll("th[data-c]"),function(th
 
 /* ===== Pending Submissions (synced with the Home Health Redzone sheet, same logic as the Recruiter Hub) ===== */
 var PEND_ID='18jRALHAXGl1aRHakl40pxn9ybdzEsyKnYvJX2mnWuCo', JOB_ID='1wUAUuAPpE18ikWuuZgbQJHLhMgKHkbRh3jgn17BXgYw';
-var PS={rows:[],jobs:[],at:0,src:'',busy:false}, psView='all', psGroup='sub', psKey='', psSortK='attn', psSortD=1, psN=0, psClientSel=null;
+var PS={rows:[],jobs:[],at:0,src:'',busy:false}, psView='all', psGroup='sub', psKey='', psSortK='attn', psSortD=1, psN=0, psClientSel=null, PF={cand:'',job:'',sub:'',stat:'',rec:'',am:'',sheet:'',fu:''};
 var PS_COL={orange:'#E8590C',yellow:'#E0A800',teal:'#0C8599',purple:'#7048E8',blue:'#1C7ED6',gray:'#98A2B3',green:'#2F9E44',red:'#E03131',peach:'#A0785A'};
 var PS_LEG=[['orange','Needs a follow-up','No status change in 72+ hours, or no update in 48 hours'],['yellow','Waiting 48 to 72 hours','No status change, 48 to 72 hours'],['teal','Interviewing','Interview requested or scheduled'],['purple','Shortlisted','Shortlisted'],['blue','New or recently updated','Submitted or updated in the last 48 hours'],['gray','No submission date','The row has no submission date'],['green','Offer accepted','Offer accepted'],['red','Closed or rejected','Job closed, or candidate rejected or withdrew'],['peach','Halted','Halted']];
 var ATTN={orange:0,yellow:1,teal:2,purple:3,blue:4,gray:5,green:6,red:7,peach:8};
@@ -390,8 +395,41 @@ function psBase(){
     if(psView==='done'&&!(r.k.key==='red'||r.k.key==='green'))return false;
     if(psView==='halted'&&r.k.key!=='peach')return false;
     if(psKey&&r.k.key!==psKey)return false;
+    if(!psColOk(r))return false;
     return !q||[r.name,r.client,r.loc,r.recruiter,r.am,r.stage,r.title,r.req].join(' ').toLowerCase().indexOf(q)>=0;
   });
+}
+/* ---- column filters ---- */
+var PS_STAT_LBL={orange:'Needs a follow-up',yellow:'Waiting 48 to 72 hours',teal:'Interviewing',purple:'Shortlisted',blue:'New or recently updated',green:'Offer accepted',red:'Closed or rejected',peach:'Halted',gray:'No submission date'};
+function psAgeOk(d,v,neverOk){var n=d?daysSince(d):null;if(n===null)return v==='none'||(neverOk&&v==='never');if(v==='none'||v==='never')return false;
+  return v==='today'?n<=0:v==='48h'?n<=2:v==='3to7'?n>=3&&n<=7:v==='8plus'?n>=8:true}
+function psColOk(r){
+  var f=PF,t;
+  if(f.cand&&String(r.name||'').toLowerCase().indexOf(f.cand.trim().toLowerCase())<0)return false;
+  if(f.job){t=f.job.trim().toLowerCase();if([r.title,r.client,r.loc,r.city,r.st,r.req].join(' ').toLowerCase().indexOf(t)<0)return false}
+  if(f.sub&&!psAgeOk(r.date,f.sub))return false;
+  if(f.stat&&r.k.key!==f.stat)return false;
+  if(f.rec&&(r.recruiter||'')!==f.rec)return false;
+  if(f.am&&(r.am||'')!==f.am)return false;
+  if(f.sheet){var jb=jobFor(r);if(!jb||jb.kind!==f.sheet)return false}
+  if(f.fu){var u=r.follow&&(!r.date||r.follow>=r.date)?r.follow:null;if(f.fu==='never'){if(u)return false}else if(!u||!psAgeOk(u,f.fu))return false}
+  return true;
+}
+function psFillSel(el,list,cur){
+  el.textContent='';var o=document.createElement('option');o.value='';o.textContent='Any';el.appendChild(o);
+  if(cur&&!list.some(function(q){return q[0]===cur}))list=list.concat([[cur,cur+' (none now)']]);
+  list.forEach(function(q){var o=document.createElement('option');o.value=q[0];o.textContent=q[1];el.appendChild(o)});el.value=cur;
+}
+function psFilterUI(cur){
+  var box=$('psF'),seen={},recs={},ams={};
+  cur.forEach(function(r){seen[r.k.key]=1;if(r.recruiter)recs[r.recruiter]=1;if(r.am)ams[r.am]=1});
+  var srt=function(o){return Object.keys(o).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1}).map(function(k){return [k,k]})};
+  psFillSel(box.querySelector('[data-f=stat]'),PS_LEG.filter(function(l){return seen[l[0]]}).map(function(l){return [l[0],PS_STAT_LBL[l[0]]]}),PF.stat);
+  if(PF.stat&&!seen[PF.stat])box.querySelector('[data-f=stat] option:last-child').textContent=PS_STAT_LBL[PF.stat]+' (none now)';
+  psFillSel(box.querySelector('[data-f=rec]'),srt(recs),PF.rec);
+  psFillSel(box.querySelector('[data-f=am]'),srt(ams),PF.am);
+  var n=0;Array.prototype.forEach.call(box.querySelectorAll('[data-f]'),function(el){var k=el.getAttribute('data-f');if(el.value!==PF[k])el.value=PF[k];el.classList.toggle('on',!!PF[k]);if(PF[k])n++});
+  $('psFN').textContent=n+' filter'+(n===1?'':'s')+' on';$('psFN').style.display=n?'':'none';$('psClearF').style.display=n?'':'none';
 }
 function psSorted(L){
   L=L.slice();var k=psSortK,d=psSortD;
@@ -429,6 +467,7 @@ function renderPS(){
   if(psClientSel===null)psClientSel='__lhc';
   sel.value=psClientSel;if(sel.value!==psClientSel){psClientSel='__lhc';sel.value='__lhc'}
   $('psStats').innerHTML=PS_LEG.filter(function(l){return l[0]!=='gray'||cnt.gray}).map(function(l){var k=l[0];return '<button type="button" class="pst'+(cnt[k]?'':' zero')+(psKey===k?' on':'')+'" style="--k:'+PS_COL[k]+'" data-pk="'+k+'" title="'+esc(l[2])+'"><span class="n"><span class="ps-dot"></span>'+(cnt[k]||0)+'</span><span class="l">'+esc(l[1])+'</span></button>'}).join('');
+  psFilterUI(cur);
   var rows=psSorted(psBase());
   $('psNote').textContent='Showing '+rows.length+' of '+cur.length+' submissions. '+act.length+' active.'+(PS.rows.length-cur.length?' '+(PS.rows.length-cur.length)+' older closed submissions are hidden.':'');
   var html='';
@@ -534,6 +573,8 @@ $('psClient').onchange=function(){psClientSel=this.value;renderPS()};
 $('psQ').oninput=function(){renderPS()};
 Array.prototype.forEach.call(document.querySelectorAll('th[data-p]'),function(th){th.onclick=function(){var k=th.getAttribute('data-p');if(psSortK===k)psSortD=-psSortD;else{psSortK=k;psSortD=1}renderPS()}});
 $('psRefresh').onclick=function(){loadPS(false)};
+Array.prototype.forEach.call(document.querySelectorAll('#psF [data-f]'),function(el){var k=el.getAttribute('data-f');el.addEventListener(el.tagName==='INPUT'?'input':'change',function(){PF[k]=el.value;renderPS()});el.addEventListener('click',function(e){e.stopPropagation()})});
+$('psClearF').onclick=function(){Object.keys(PF).forEach(function(k){PF[k]=''});renderPS()};
 setInterval(function(){if(!document.hidden&&PS.src==='live')loadPS(true)},5*60*1000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&PS.at&&Date.now()-PS.at>2*60*1000)loadPS(true)});
 
