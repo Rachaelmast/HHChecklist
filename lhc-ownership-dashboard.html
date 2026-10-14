@@ -396,6 +396,19 @@ function psFailMsg(code){
   if(code==='blocked_by_policy')return 'Your organization blocks Google Drive for this page.'+tail;
   return 'Could not reach Google just now.'+tail+' Click Refresh to try again.';
 }
+/* ---- hourly copy of the sheets, saved in the dashboard's shared data by Claude (doc sync/latest) ---- */
+var PS_SYNC=null;
+function psApplySync(){
+  var d=PS_SYNC;if(!d||!d.pending)return false;
+  try{
+    PS.rows=parseLive(gridTable(parseCsv(d.pending)));
+    var js=[];JOB_TABS.forEach(function(t,i){var c=d['jobs'+i];if(c)js=js.concat(parseJobs(gridTable(parseCsv(c)),t))});
+    if(js.length)PS.jobs=js;else if(!PS.jobs.length)PS.jobs=SNAP.jobs.map(function(j){return {t:j.t,co:j.co,id:j.id,city:j.city,st:j.st,g:+j.g||0}});
+  }catch(e){return false}
+  PS.at=Date.now();PS.src='copy';PS.via='copy';
+  var t=new Date(d.at||0);psChip('Synced from the sheet '+(isNaN(t)||!d.at?'':t.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))+'. Updates every hour.','ok');
+  return true;
+}
 var psLoading=false;
 function loadPS(quiet){
   if(psLoading)return Promise.resolve();psLoading=true;
@@ -405,7 +418,9 @@ function loadPS(quiet){
     if(d&&d.table){via='drive';return d}
     return gviz(PEND_ID).then(function(r){if(r&&!r.err&&r.table&&r.status!=='error'){via='gviz';return {table:r.table}}return {err:d&&d.err}});
   }).then(function(res){
+    PS.via=via;
     if(!res||!res.table){
+      if(psApplySync())return null;
       if(!PS.rows.length){fromSnap();PS.at=0}
       PS.src='snap';psChip(psFailMsg(res&&res.err),'miss');return null;
     }
@@ -695,6 +710,7 @@ function localDb(){var K='lhc_dash_v1',subs={};function load(){try{return JSON.p
   db.collection("branchEdits").onSnapshot(function(s){bEdits={};s.docs.forEach(function(x){bEdits[x.id]=x.data()});later()},err);
   db.collection("contactEdits").onSnapshot(function(s){cEdits={};s.docs.forEach(function(x){cEdits[x.id]=x.data()});later()},err);
   db.collection("contactsAdded").onSnapshot(function(s){cAdded={};s.docs.forEach(function(x){cAdded[x.id]=x.data()});later()},err);
+  if(!standalone)db.doc("sync/latest").onSnapshot(function(s){PS_SYNC=s.exists?s.data():null;if(PS.via!=='drive'&&PS.via!=='gviz'&&psApplySync())later()},function(){});
  }catch(e){banner("Shared saving is not available in this view.")}
  loadPS(false);
 })();
